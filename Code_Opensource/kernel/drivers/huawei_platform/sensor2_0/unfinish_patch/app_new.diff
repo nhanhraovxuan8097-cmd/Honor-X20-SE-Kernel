@@ -1,0 +1,498 @@
+diff --git a/basic_sensor/basic_sensors.c b/basic_sensor/basic_sensors.c
+index f8dd679..3c44663 100755
+--- a/basic_sensor/basic_sensors.c
++++ b/basic_sensor/basic_sensors.c
+@@ -4,7 +4,6 @@
+  * Author: contexthub team
+  * Create: 2012-01-06
+  */
+-
+ #include <basic_sensors.h>
+ #include <cmsis_os.h>
+ #include <xhub_typedef.h>
+@@ -21,6 +20,7 @@
+ #include <multi_host_manager.h>
+ #include <sensor_misc.h>
+ #include <als.h>
++#include <ps.h>
+ #include <posture.h>
+ #include <math.h>
+ #include <stdlib.h>
+@@ -97,6 +97,18 @@ static UINT8 map_angle;
+ static INT32 ps_ext_hall_switch;
+ static UINT8 ps_open_ext_hall_flag;
+ static sensor_t *psensor;
++/* for Angle assist */
++static struct ps_gesture_data_t ps_gesture;
++static UINT8 ps_used_sensor[] = { TAG_PS };
++static UINT8 ps_gesture_sensor[] = { TAG_ACCEL };
++static UINT8 ps_rcv_request = PS_RCV_UNKNOWN;
++static struct phonecall_mutex_data_t phc_mutex_handle;
++static struct app_ps_priv app_ps_priv_data;
++static struct ultra_axis_t ps_gesture_acc_data;
++static struct phonecall_act_data_t phc_act_handle;
++static UINT8 ps_init_state = PS_UNINIT;
++INT32 g_pitch = 0;
++INT32 g_roll = 0;
+ 
+ osMutexId auto_aux_mutex_id = NULL;
+ osMutexDef(AUTO_AUX_MUTEX);
+@@ -343,9 +355,284 @@ static int  uncalibrate_mag_process_data(app_t *app, UINT8 tag, int *data, int l
+     return SUCCESS;
+ }
+ 
++static void phonecall_handup_detection(void)
++{
++    // judge whether or not meet the handup action
++    if (abs(phc_act_handle.phonecall_det_res) > DYN_THRESHOLD) {
++        if (phc_act_handle.ps_top_shelter == TRUE)
++            phc_act_handle.handup_judge = HANDUP_TIME + SH_PHONECALL_COUNT;
++        else if (phc_act_handle.ps_top_shelter == FALSE)
++            phc_act_handle.handup_judge = HANDUP_TIME;
++    } else if (phc_act_handle.handup_judge > 0) {
++        phc_act_handle.handup_judge--;
++        PRINT_INFO("[PS_GESTURE]ps_phonecall_gesture: handup_judge = %d\n", phc_act_handle.handup_judge);
++    }
++}
++
++static void phonecall_gesture_dyn_detection(void)
++{
++    phc_act_handle.temp_value[0] = abs(g_roll) + abs(g_pitch);
++    if (phc_act_handle.phc_start_count > 0) {
++        phc_act_handle.dyn_detection[phc_act_handle.dyn_data_num] =
++            phc_act_handle.temp_value[1] - phc_act_handle.temp_value[0];
++        phc_act_handle.temp_value[1] = phc_act_handle.temp_value[0];
++        phc_act_handle.dyn_data_num++;
++    } else {
++        phc_act_handle.temp_value[1] = phc_act_handle.temp_value[0];
++    }
++    if (phc_act_handle.phc_start_count > (DYN_DET_DATA_MAX - 1)) {
++        // Calculate the handup action threshold
++        phc_act_handle.phonecall_det_res = phc_act_handle.dyn_detection[DYN_DET_DATA_0] +
++            phc_act_handle.dyn_detection[DYN_DET_DATA_1] + phc_act_handle.dyn_detection[DYN_DET_DATA_2] +
++            phc_act_handle.dyn_detection[DYN_DET_DATA_3] + phc_act_handle.dyn_detection[DYN_DET_DATA_4] +
++            phc_act_handle.dyn_detection[DYN_DET_DATA_5] + phc_act_handle.dyn_detection[DYN_DET_DATA_6] +
++            phc_act_handle.dyn_detection[DYN_DET_DATA_7] + phc_act_handle.dyn_detection[DYN_DET_DATA_8] +
++            phc_act_handle.dyn_detection[DYN_DET_DATA_9];
++    }
++    if (phc_act_handle.dyn_data_num == DYN_DET_DATA_MAX)
++        phc_act_handle.dyn_data_num = 0;
++
++    if (phc_act_handle.phc_start_count < (PHC_NUM_MAX + 1))
++        phc_act_handle.phc_start_count++;
++
++    phonecall_handup_detection();
++}
++
++static void ps_phonecall_gesture(void)
++{
++    float temp_acc_data[STRUCT_DATA_NUM] = { 0 };
++
++    temp_acc_data[PS_DATA_X] = ps_gesture_acc_data.x * SENSOR_DATA_FACTOR;
++    temp_acc_data[PS_DATA_Y] = ps_gesture_acc_data.y * SENSOR_DATA_FACTOR;
++    temp_acc_data[PS_DATA_Z] = ps_gesture_acc_data.z * SENSOR_DATA_FACTOR;
++    // calculate roll and pitch, they are phone gesture angle
++    g_roll = FLAT_ANGLE / PEI * atan2(temp_acc_data[PS_DATA_X], sqrt(temp_acc_data[PS_DATA_Y] *
++        temp_acc_data[PS_DATA_Y] + temp_acc_data[PS_DATA_Z] * temp_acc_data[PS_DATA_Z])); // g_roll
++    g_pitch = FLAT_ANGLE / PEI * atan2(-temp_acc_data[PS_DATA_Y], temp_acc_data[PS_DATA_Z]); // g_pitch
++    phonecall_gesture_dyn_detection();
++}
++
++static void ps_phonecall_mutex(void)
++{
++    if (left_face_gesture(g_pitch, g_roll)) {
++        // phone with left face
++        phc_mutex_handle.right_phonecallmutex = FALSE;
++        phc_mutex_handle.left_phonecallmutex = TRUE;
++        phc_act_handle.ps_top_shelter = TRUE;
++    } else if (right_face_gesture(g_pitch, g_roll)) {
++        // phone with right face
++        phc_mutex_handle.left_phonecallmutex = FALSE;
++        phc_mutex_handle.right_phonecallmutex = TRUE;
++        phc_act_handle.ps_top_shelter = TRUE;
++    }
++}
++
++static INT32 ps_process_near_event(void)
++{
++    INT32 phonecall_report = PS_NEAR_BY;
++
++    if (right_face_gesture(g_pitch, g_roll) || left_face_gesture(g_pitch, g_roll)) {
++        if ((phc_mutex_handle.enter_mutex_count < FORCE_SCREEN_OFF_COUNT) &&
++            (phc_act_handle.handup_judge > 0)) {
++            phc_mutex_handle.left_phonecallmutex = TRUE;
++            phc_mutex_handle.right_phonecallmutex = TRUE;
++            if (phc_mutex_handle.enter_mutex_count == FORCE_SCREEN_OFF_COUNT - 1)
++                // due to unstability of sensor, use 150ms data to judge
++                ps_phonecall_mutex();
++
++            phc_mutex_handle.enter_mutex_count++;
++        }
++    } else if (no_right_face_gesture(g_pitch, g_roll) || no_left_face_gesture(g_pitch, g_roll)) {
++        phc_mutex_handle.left_phonecallmutex = FALSE;
++        phc_mutex_handle.right_phonecallmutex = FALSE;
++        phc_mutex_handle.enter_mutex_count = 0;
++    }
++    return phonecall_report;
++    }
++
++static INT32 ps_far_left(void)
++{
++    INT32 phonecall_report = PS_NEAR_BY;
++
++    if (left_face_gesture(g_pitch, g_roll)) {  // Phone with left face
++        phonecall_report = PS_NEAR_BY;
++        phc_mutex_handle.out_left_mutex_count = 0;
++    } else {
++        phc_mutex_handle.out_left_mutex_count++;  // Need 250ms datas out due to unstability of sensor
++        if (phc_mutex_handle.out_left_mutex_count == SCREEN_ON_OUT_COUNT) {
++            phonecall_report = PS_FAR_AWAY;
++            phc_mutex_handle.left_phonecallmutex = FALSE;
++            phc_mutex_handle.out_left_mutex_count = 0;
++        }
++    }
++
++    return phonecall_report;
++    }
++
++static INT32 ps_far_right(void)
++{
++    INT32 phonecall_report = PS_NEAR_BY;
++
++    if (right_face_gesture(g_pitch, g_roll)) { // Phone with right flag
++        phonecall_report = PS_NEAR_BY;
++        phc_mutex_handle.out_right_mutex_count = 0;
++    } else {
++        phc_mutex_handle.out_right_mutex_count++;
++        if (phc_mutex_handle.out_right_mutex_count == SCREEN_ON_OUT_COUNT) {
++            phonecall_report = PS_FAR_AWAY;
++            phc_mutex_handle.right_phonecallmutex = FALSE;
++            phc_mutex_handle.out_right_mutex_count = 0;
++        }
++    }
++
++    return phonecall_report;
++    }
++
++static INT32 ps_process_far_event(void)
++{
++    INT32 phonecall_report = PS_NEAR_BY;
++
++    phc_mutex_handle.enter_mutex_count = 0;
++    // when phone far away from face, judge phone gesture
++    if (phc_mutex_handle.left_phonecallmutex && phc_mutex_handle.right_phonecallmutex) {
++        phc_mutex_handle.left_phonecallmutex = FALSE;
++        phc_mutex_handle.right_phonecallmutex = FALSE;
++        phonecall_report = PS_FAR_AWAY;
++    } else if (phc_mutex_handle.left_phonecallmutex) {
++        phonecall_report = ps_far_left();
++    } else if (phc_mutex_handle.right_phonecallmutex) {
++        phonecall_report = ps_far_right();
++    } else {
++        phonecall_report = PS_FAR_AWAY;
++    }
++
++    return phonecall_report;
++    }
++
++static INT32 ps_process_shelter(void)
++{
++    INT32 phonecall_report = PS_NEAR_BY;
++
++    // when phone top ps in shelter, judge phone gesture
++    if (right_face_gesture(g_pitch, g_roll) || left_face_gesture(g_pitch, g_roll)) {
++        if (phc_act_handle.shelter_count == SH_PHONECALL_COUNT) {
++            phonecall_report = ps_process_near_event();
++        } else if (phc_mutex_handle.right_phonecallmutex == FALSE &&
++            phc_mutex_handle.left_phonecallmutex == FALSE) {
++            phc_act_handle.shelter_count++;
++            phonecall_report = ps_gesture.ps_data_once;
++        } else {
++            phc_act_handle.shelter_count++;
++            phonecall_report = PS_NEAR_BY;
++        }
++    } else if (no_right_face_gesture(g_pitch, g_roll) ||
++        no_left_face_gesture(g_pitch, g_roll)) {
++        if (phc_act_handle.shelter_down_count >= SH_PHONECALL_COUNT) {
++                phonecall_report = ps_gesture.ps_data_once;
++
++            phc_mutex_handle.left_phonecallmutex = FALSE;
++            phc_mutex_handle.right_phonecallmutex = FALSE;
++            phc_mutex_handle.enter_mutex_count = 0;
++        } else {
++            phc_act_handle.shelter_down_count++;
++            phonecall_report = ps_gesture.ps_data_once;
++        }
++    }
++    return phonecall_report;
++}
++
++static INT32 ps_gesture_judge_result(INT32 data)
++{
++    INT32 phonecall_report = PS_FAR_AWAY;
++
++    if (data == PS_NEAR_BY) { // ps in near, judge phone gesture
++        if (phc_act_handle.ps_top_shelter == FALSE)
++            phonecall_report = ps_process_near_event();
++        else if (phc_act_handle.ps_top_shelter == TRUE)
++            phonecall_report = ps_process_shelter();
++    } else if (data == PS_FAR_AWAY) { // ps in far, judge phone gesture
++        phc_act_handle.ps_top_shelter = FALSE;
++        phc_act_handle.shelter_down_count = 0;
++        phonecall_report = ps_process_far_event();
++    }
++
++    return phonecall_report;
++}
++
++static INT32 ps_process_gesture(INT32 data)
++{
++    INT32 phonecall_report = PS_FAR_AWAY;
++
++    // save ps data from sensor
++    if ((data == PS_NEAR_BY) || (data == PS_FAR_AWAY))
++        ps_gesture.ps_data_old = data;
++    else
++        data = ps_gesture.ps_data_old;
++
++    if (ps_gesture.acc_data_ready == TRUE) {
++        ps_phonecall_gesture();
++        phonecall_report = ps_gesture_judge_result(data);
++    } else {
++        phonecall_report = data;
++    }
++
++    if (phc_act_handle.ps_top_shelter == TRUE)
++        PRINT_INFO("[PS_GESTURE]ps_process_gesture, ps_top_shelter done\n");
++
++    return phonecall_report;
++}
++
++static void ps_status_upload(INT32 *data)
++{
++    if (data[PS_DATA_X] != ps_gesture.ps_gesture_data_old)
++        ps_gesture.ps_gesture_count = LOOP_THRESHOLD;
++    else if (ps_gesture.ps_gesture_count > 0)
++        ps_gesture.ps_gesture_count--;
++
++    ps_gesture.ps_gesture_data_old = data[PS_DATA_X];
++}
++
++static int angle_assit_ps(int *data)
++{
++    struct ps_data_t *p = (struct ps_data_t *)data;
++    if ((data[PS_DATA_X] == PS_NEAR_BY) || (data[PS_DATA_X] == PS_FAR_AWAY))
++        app_ps_priv_data.ps_status = data[PS_DATA_X];
++
++    if (ps_rcv_request == PS_RCV_ON) {
++        data[PS_DATA_X] = ps_process_gesture(data[PS_DATA_X]);
++        ps_gesture.ps_data_once = data[PS_DATA_X];
++        PRINT_INFO("[PS_GESTURE]ps_sound_process_data, PS_data x=%d, y=%d, z=%d, phonecall_det_res=%d, g_roll = %d, g_pitch = %d\n",
++            p->data[PS_DATA_X], p->data[PS_DATA_Y], p->data[PS_DATA_Z],
++            abs(phc_act_handle.phonecall_det_res), g_roll, g_pitch);
++
++        ps_status_upload(data);
++        if (ps_gesture.ps_gesture_count == 0)
++            return FAIL;
++    } else if (ps_rcv_request == PS_RCV_OFF || ps_rcv_request == PS_RCV_UNKNOWN) {
++        // sonic_ps_test
++        if ((data[PS_DATA_X] == PS_NEAR_BY) || (data[PS_DATA_X] == PS_FAR_AWAY))
++            ps_gesture.ps_data_old = data[PS_DATA_X];
++    }
++    PRINT_INFO("ps_process_data, PS_data x=%d, y=%d, z=%d\n",
++        p->data[PS_DATA_X], p->data[PS_DATA_Y], p->data[PS_DATA_Z]);
++    if (data[PS_DATA_X] == -1)
++        return FAIL;
++    return SUCCESS;
++}
++
+ static int ps_process_data(app_t *app, UINT8 tag, int *data, int len, UINT64 timestamp)
+ {
+     UINT8 tag_ps = TAG_PS;
++    if (tag == TAG_ACCEL) {
++        struct accel_data_ps_t *p_acc = (struct accel_data_ps_t *)data;
++        ps_gesture_acc_data.x = ((FLOAT)(p_acc->data[PS_DATA_X])) * ACC_RATIO;
++        ps_gesture_acc_data.y = ((FLOAT)(p_acc->data[PS_DATA_Y])) * ACC_RATIO;
++        ps_gesture_acc_data.z = ((FLOAT)(p_acc->data[PS_DATA_Z])) * ACC_RATIO;
++        ps_gesture.acc_data_ready = TRUE;
++        PRINT_DEBUG("[PS_GESTURE]ps_sound_process_data, ACC data x = %d, y = %d, z = %d\n",
++            p_acc->data[PS_DATA_X], p_acc->data[PS_DATA_Y], p_acc->data[PS_DATA_Z]);
++        return SUCCESS;
++    }
+ 
+     if ((data[0] == -1) && (old_als_for_ps_flag == als_for_ps_flag)) {
+         return SUCCESS;
+@@ -365,9 +652,11 @@ static int ps_process_data(app_t *app, UINT8 tag, int *data, int len, UINT64 tim
+         data[0] = old_ps_state;
+         PRINT_INFO("ps_process_data update last useful ps state %d\n", old_ps_state);
+     }
+-
+     old_als_for_ps_flag = als_for_ps_flag;
+-    comm_process_data(app, tag_ps, data, len, timestamp);
++
++    /* add angle assist after als assist */
++    if (angle_assit_ps(data) == SUCCESS)
++        comm_process_data(app, tag_ps, data, len, timestamp);
+     return SUCCESS;
+ }
+ 
+@@ -807,6 +1096,76 @@ static int basic_sensor_set_param(app_t *app, void *msg, UINT16 len, sensor_t *s
+     return ret;
+ }
+ 
++AT_DDR_TEXT static INT32 ps_set_gesture_sensor_interval(app_t *app)
++{
++    UINT32 i;
++    sensor_sample_para_t set_sound_sensor_interval = { PS_SOUND_INTERVAL, NULL };
++
++    for (i = 0; i < ARRAY_SIZE(ps_gesture_sensor); i++) {
++        PRINT_INFO("ps_set_gesture_sensor_interval app tag:%d\n", ps_used_sensor[i]);
++        if (snif_set_interval(app, ps_gesture_sensor[i], &set_sound_sensor_interval)) {
++            PRINT_ERR("ps_set_gesture_sensor_interval fail\n");
++            return FAIL;
++        }
++    }
++
++    return SUCCESS;
++}
++
++AT_DDR_TEXT static void ps_open_gesture_sensor(app_t *app)
++{
++    UINT32 i;
++
++    for (i = 0; i < ARRAY_SIZE(ps_gesture_sensor); i++) {
++        if (snif_open(app, ps_gesture_sensor[i]))
++            PRINT_ERR("app %d gesture_sensor %d open failed\n", app->tag, ps_used_sensor[i]);
++    }
++}
++
++AT_DDR_TEXT static void ps_close_gesture_sensor(app_t *app)
++{
++    UINT32 i;
++
++    for (i = 0; i < ARRAY_SIZE(ps_gesture_sensor); i++) {
++        if (snif_close(app, ps_gesture_sensor[i]))
++            PRINT_ERR("app %d failed close gesture sensor %d\n", app->tag, ps_used_sensor[i]);
++    }
++
++}
++
++AT_DDR_TEXT static void ps_gesture_init(void)
++{
++    ps_gesture.ps_data_once = PS_FAR_AWAY;
++    ps_gesture.acc_data_ready = FALSE;
++    phc_act_handle.handup_judge = 0;
++    phc_act_handle.phc_start_count = 0;
++    phc_act_handle.ps_top_shelter = 0;
++    (void)memset_s(&phc_mutex_handle, sizeof(struct phonecall_mutex_data_t), 0, sizeof(struct phonecall_mutex_data_t));
++}
++
++AT_DDR_TEXT static void ps_sound_cmd(app_t *app, UINT32 state)
++{
++    INT32 ret = SUCCESS;
++
++    if (state == PS_RCV_ON) {
++        ps_open_gesture_sensor(app);
++        ret = ps_set_gesture_sensor_interval(app);
++        ps_gesture.ps_gesture_data_old = PS_FAR_AWAY;
++        ps_gesture.ps_gesture_count = LOOP_THRESHOLD;
++        if (ret == FAIL)
++            ps_close_gesture_sensor(app);
++
++        ps_rcv_request = PS_RCV_ON;
++        ps_gesture_init();
++
++        PRINT_INFO("ps_rcv_request == PS_RCV_ON\n");
++    } else if (state == PS_RCV_OFF) {
++        ps_close_gesture_sensor(app);
++        ps_rcv_request = PS_RCV_OFF;
++        PRINT_INFO("ps_rcv_request == PS_RCV_OFF\n");
++    }
++}
++
+ static int basic_sensor_config_subcmd(app_t *app, void *msg, UINT16 len, sensor_t *sensor, BOOL *finish)
+ {
+     pkt_cmn_config_req_t *cfg_msg = (pkt_cmn_config_req_t *)msg;
+@@ -875,6 +1234,29 @@ static int basic_sensor_config_subcmd(app_t *app, void *msg, UINT16 len, sensor_
+     return SUCCESS;
+ }
+ 
++static int ps_config_subcmd(app_t *app, void *msg, UINT16 len, sensor_t *sensor, BOOL *finish)
++{
++    pkt_cmn_config_req_t *cfg_msg = (pkt_cmn_config_req_t *)msg;
++    *finish = FALSE;
++
++    switch (cfg_msg->sub_cmd) {
++    case SUB_CMD_PS_RCV_STATUS_REQ:
++        PRINT_INFO("[SOUND_LOG]SUB_CMD_PS_RCV_STATUS_REQ, value: %d\n", *(UINT8 *)cfg_msg->para);
++        /* todo :check for peri_used_request*/
++        ps_sound_cmd(app, *(UINT8 *)cfg_msg->para);
++        /* todo check should send SENSOR_IOCTL_SET_PS_RCV_STATUS cmd*/
++        return SUCCESS;
++
++    default:
++        PRINT_ERR("basic_sensor_config_subcmd sub_cmd %d tag %d\n", (UINT32)cfg_msg->sub_cmd, (UINT32)app->tag);
++        return EPARA;
++
++    }
++
++    return SUCCESS;
++}
++
++
+ static int basic_sensor_config(app_t *app, void *msg, UINT16 len)
+ {
+     int ret;
+@@ -885,7 +1267,10 @@ static int basic_sensor_config(app_t *app, void *msg, UINT16 len)
+     pkt_common_resp_with_para resp_para = { 0 };
+     sensor = get_sensor_by_tag(app->tag);
+ 
+-    if (sensor != NULL) {
++    if (app->tag == TAG_PS && sensor != NULL) {
++        // must excute before basic_sensor_config_subcmd
++        ret = ps_config_subcmd(app, msg, len, sensor, &finish);
++    } else if (sensor != NULL) {
+         ret = basic_sensor_config_subcmd(app, msg, len, sensor, &finish);
+     } else {
+         PRINT_ERR("basic_sensor_config can't find sensor with tag %d\n", app->tag);
+@@ -912,7 +1297,9 @@ static int basic_sensor_set_interval(app_t *app, void *para)
+     int i;
+     int index;
+     index = get_sensor_info_by_tag(app->tag);
+-
++    if (app->tag == TAG_PS) {
++        ps_gesture.ps_upload_aod_old = PS_NEAR_BY_UNKNOWN;
++    }
+     for (i = 0; i < b_sensor_info[index].used_sensor_cnt; i++) {
+         if (snif_set_interval(app, b_sensor_info[index].used_sensor[i], NULL)) {
+             return FAIL;
+@@ -944,6 +1331,20 @@ static int basic_sensor_app_attach_sensor(app_t *app)
+     PRINT_INFO("app : %d attach sensor success\n", app->tag);
+     return SUCCESS;
+ }
++
++AT_DDR_TEXT static void ps_priv_data_init(void)
++{
++    if (ps_init_state != PS_UNINIT)
++        return;
++    ps_init_state = PS_INITED;
++    app_ps_priv_data.ps_status = PS_FAR_AWAY;
++    app_ps_priv_data.ultrasonic_immediate_data.data[PS_DATA_X] = PS_NEAR_BY_UNKNOWN;
++    app_ps_priv_data.ultrasonic_immediate_data.data[PS_DATA_Y] = 0;
++    app_ps_priv_data.ultrasonic_immediate_data.data[PS_DATA_Z] = 0;
++    ps_gesture.ps_upload_aod_old = PS_NEAR_BY_UNKNOWN;
++}
++
++
+ static int basic_sensor_init(app_t *app)
+ {
+     osThreadId ti;
+@@ -952,6 +1353,8 @@ static int basic_sensor_init(app_t *app)
+ 
+     if (ret != SUCCESS) {
+         PRINT_ERR("app %d init fail\n", app->tag);
++        if (app->tag == TAG_PS)
++            ps_gesture.ps_data_old = PS_FAR_AWAY;
+         return FAIL;
+     }
+ 

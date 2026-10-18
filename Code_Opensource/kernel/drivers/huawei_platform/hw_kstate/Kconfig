@@ -1,0 +1,4 @@
+config KSTATE
+    tristate "Kernel State"
+    help
+        kernel state, please choose it.

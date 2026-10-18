@@ -1,0 +1,271 @@
+#include "../hihonor_charger/mt6893_chl_22p5w_honor_charger.dtsi"
+
+	&pio {
+		bq25970_irq_pins_default: bq25970_irq_pins_default {
+			pins_cmd_dat {
+				pinmux = <PINMUX_GPIO16__FUNC_GPIO16>;
+				slew-rate = <0>;
+				bias-pull-up;
+			};
+		};
+		fsa9685_irq_pins_default: fsa9685_irq_pins_default {
+			pins_cmd_dat {
+				pinmux = <PINMUX_GPIO22__FUNC_GPIO22>;
+				slew-rate = <0>;
+				bias-pull-up;
+			};
+		};
+		usb_dpdn_switch_pins_default: usb_dpdn_switch_pins_default {
+			pins_cmd_dat {
+				pinmux = <PINMUX_GPIO35__FUNC_GPIO35>;
+				slew-rate = <1>;
+				bias-disable;
+				output-high;
+			};
+		};
+	};
+
+	&i2c7 {
+		bq25970@65 {
+			compatible = "bq25970";
+		pinctrl-names = "default";
+		pinctrl-0 = <&bq25970_irq_pins_default>;
+		gpio_int = <&pio 16 0x0>;
+		switching_frequency = <675>;
+		sense_r_config = <50>;
+		sense_r_actual = <50>;
+		reg = <0x65>;
+		status = "ok";
+	};
+	fairchild_fsa9685@25 {
+		compatible = "huawei,fairchild_fsa9685";
+		reg = <0x25>;
+		pinctrl-names = "default","default";
+		pinctrl-0 = <&fsa9685_irq_pins_default>;
+		pinctrl-1 = <&usb_dpdn_switch_pins_default>;
+		fairchild_fsa9685,gpio-intb = <&pio 22 0x0>;
+		gpio_int = <&pio 35 0x0>;
+		usbid-enable = <0>;
+		fcp_support = <1>;
+		scp_support = <1>;
+		mhl_detect_disable = <1>;
+		power_by_5v = <1>;
+		close_bc12 = <0>;
+		ignore_force_ac = <1>;
+		/* for rt8979 */
+		interrupt-names = "vbus_change", "device_change", "detach",
+				  "attach";
+		/* auto_switch; */
+		scp;
+		dcd;
+		dcd_timeout = <600>;  /* ms */
+		intb_watchdog = <1000>;  /* ms */
+		ovp_sel = <14500000>;  /* uV */
+		status = "ok";
+	};
+};
+
+	&pio {
+		cps4035_p_irq_pins_default: cps4035_p_irq_pins_default {
+			pins_cmd_dat {
+				pinmux = <PINMUX_GPIO13__FUNC_GPIO13>;
+				slew-rate = <0>;
+				bias-pull-up;
+			};
+		};
+		cps4035_kb_irq_pins_default: cps4035_kb_irq_pins_default {
+			pins_cmd_dat {
+				pinmux = <PINMUX_GPIO12__FUNC_GPIO12>;
+				slew-rate = <0>;
+				bias-pull-up;
+			};
+		};
+		cps4035_6v_switch_pins_default: cps4035_6v_switch_pins_default {
+			pins_cmd_dat {
+				pinmux = <PINMUX_GPIO188__FUNC_GPIO188>;
+				slew-rate = <1>;
+				bias-disable;
+				output-high;
+			};
+		};
+		cps4035_p_en_switch_pins_default: cps4035_p_en_switch_pins_default {
+			pins_cmd_dat {
+				pinmux = <PINMUX_GPIO29__FUNC_GPIO29>;
+				slew-rate = <1>;
+				bias-disable;
+				output-low;
+			};
+		};
+		cps4035_coil_pen_switch_pins_default: cps4035_coil_pen_switch_pins_default {
+			pins_cmd_dat {
+				pinmux = <PINMUX_GPIO64__FUNC_GPIO64>;
+				slew-rate = <1>;
+				bias-disable;
+				output-high;
+			};
+		};
+		cps4035_kb_en_switch_pins_default: cps4035_kb_en_switch_pins_default {
+			pins_cmd_dat {
+				pinmux = <PINMUX_GPIO30__FUNC_GPIO30>;
+				slew-rate = <1>;
+				bias-disable;
+				output-low;
+			};
+		};
+		cps4035_coil_kb_switch_pins_default: cps4035_coil_kb_switch_pins_default {
+			pins_cmd_dat {
+				pinmux = <PINMUX_GPIO184__FUNC_GPIO184>;
+				slew-rate = <1>;
+				bias-disable;
+				output-low;
+			};
+		};
+	};
+
+	&i2c8 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		cps-wls-charger-h@31 {
+			compatible = "cps, wls-charger-cps4035-H-pen";
+			reg = <0x31>;
+		};
+		cps-wls-charger-l@30 {
+			compatible = "cps, wls-charger-cps4035-L-pen";
+			reg = <0x30>;
+			pinctrl-names = "default","default","default","default";
+			pinctrl-0 = <&cps4035_p_irq_pins_default>;
+			pinctrl-1 = <&cps4035_p_en_switch_pins_default>;
+			pinctrl-2 = <&cps4035_6v_switch_pins_default>;
+			pinctrl-3 = <&cps4035_coil_pen_switch_pins_default>;
+			gpio_int = <&pio 13 0x0>;
+			gpio_en = <&pio 29 0x0>;
+			gpio_coil_en = <&pio 64 0x0>;
+			gpio_pwr_good = <&pio 188 0x0>;
+		};
+
+		charge_pump_hl1512@51 {
+			compatible = "charge_pump_hl1512";
+			reg = <0x51>;
+			gpio_int = <&pio 132 0x0>;
+			status = "ok";
+		};
+	};
+
+	&i2c6 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		cps-wls-charger-h@31 {
+		compatible = "cps,wls-charger-cps4035-H-keyboard";
+		reg = <0x31>;
+		};
+		cps-wls-charger-l@30 {
+			compatible = "cps,wls-charger-cps4035-L-keyboard";
+			reg = <0x30>;
+		};
+	};
+
+	&vbus_channel_boost_gpio {
+		gpio_otg_switch = <&pio 138 0x0>;
+		status = "ok";
+	};
+
+	&pd_dpm {
+		otg_channel = <1>;
+	};
+
+	&wired_channel_switch {
+		use_ovp_cutoff_wired_channel = <1>;
+		use_super_switch_cutoff_wired_channel = <0>;
+		use_wireless_switch_cutoff_wired_channel = <0>;
+		status = "ok";
+	};
+
+	&ovp_channel_switch {
+		gpio_ovp_chsw_en = <&pio 112 0x0>;
+		gpio_low_by_set_input = <0>;
+		status = "ok";
+	};
+
+	&wireless_ps {
+		gpio_txsw = <&pio 22 0x0>;
+		gpio_txsw_valid_val = <1>;
+		gpio_rxsw = <&pio 101 0x0>;
+		gpio_rxsw_valid_val = <0>;
+		gpio_ext_pwr_sw = <&pio 5 0x0>;
+		gpio_ext_pwr_sw_valid_val = <1>;
+		tx_ps_ctrl_src = <1>; /* 0:NA 1:tx_chip 2:AP */
+		sysfs_en_pwr = <1>; /* 0:null 1:rx_pwr 2:tx_pwr */
+		proc_otp_pwr = <1>; /* 0:null 1:rx_pwr 2:tx_pwr */
+		status = "ok";
+	};
+
+	&wireless_charger {
+		pmax = <30>;
+		product_max_pwr = <50000>;
+		ui_max_pwr = <27000>;
+		fod_status = <0x3163>; /* b1:fop b2:q_val */
+		antifake_key_index = <1>;
+		interference_para =
+			"0x01", "0xfe", "131", "5000", "5500", "475",
+			"0x02", "0xfd", "-1",  "-1",   "-1",   "1000";
+		rx_mode_para =
+			/*This table should be arranged in ascending order of power mode priority*/
+			/*mode  tx_vout  tx_iout tx_vset  rx_vset  rx_iset vrect_lth tbatt cable cert  icon time expect_mode*/
+			"5W",   "5000",  "475",  "5000",  "5500",  "825",  "4650",   "-1", "-1", "-1", "0", "-1",  "4",
+			"7.5W", "9000",  "1400", "9000",  "9900",  "825",  "8000",   "-1", "-1", "-1", "0", "-1",  "2",
+			"10W",  "9000",  "2000", "9000",  "9900",  "1100", "9000",   "-1", "-1", "1",  "1", "-1",  "4",
+			"SC_2", "9000",  "2000", "9000",  "9000",  "-1",   "-1",     "45", "-1", "1",  "1", "-1",  "4",
+			"SC_4", "15000", "1800", "15000", "15000", "-1",   "-1",     "45", "-1", "1",  "2", "-1",  "-1";
+		status = "ok";
+	};
+
+	&wireless_sc {
+		support_multi_ic = <1>;
+		single_ic_cp_iout_th = <4100>;
+		multi_ic_para = <2400 1000 2000 10000>;
+		ibat_max_hth = <10000>;
+		ibat_min_lth = <9700>;
+		max_vgap = <250>;
+		iout_drop_th = <1500>;
+		tbat_limit_para = <10 13 46 42>;
+		init_para =
+			/* in ratio-descending order
+			* ext_pwr: bit(0): needed by sc chip; bit(1): needed by rx
+			* type   type_name ext_pwr rx_ratio vbatt(lth, hth) rx_vout  vout_th vdiff  ileak_th vdelt  rx_vmax
+			*/
+			"0x2", "SC_2",   "0",    "1",     "3550", "4380", "9000",  "450",  "300", "100",   "300", "10000",
+			"0x4", "SC_4",   "2",    "2",     "3550", "4380", "15000", "500",  "300", "100",   "300", "20000";
+		volt_para00 =
+			"4400", "1300", "700";
+		volt_para01 =
+			"4150", "5200", "3000",
+			"4250", "3000", "2000",
+			"4300", "2000", "1400",
+			"4400", "1400", "700";
+		volt_para02 =
+			"4250", "5200", "4000",
+			"4300", "4000", "3000",
+			"4380", "3000", "2400",
+			"4400", "2400", "700";
+		bat_para =
+			"default", "10", "46", "0x02", "volt_para00",
+			"default", "10", "46", "0x04", "volt_para01",
+			"CAE", "10", "46", "0x02", "volt_para00",
+			"CAE", "10", "20", "0x04", "volt_para01",
+			"CAE", "20", "46", "0x04", "volt_para02";
+		vbat_comp_para = <7 0 20 7 1 30>;
+		status = "ok";
+	};
+
+	&wireless_tx {
+		pwr_type = <3>; /* 5VBST */
+		/* rx_vmin rx_vmax tx_vset tx_lvset tx_hvset tx_pl_th tx_pl_cnt ext_hdl */
+		tx_vset_para = < 4900 6400 5000 4500 6300 0 0 0 >;
+		/* power_supply ping handshake default */
+		tx_stage_vset = <5000 5000 5000 5000>;
+		/* type vout iout extra */
+		tx_cap = <
+			0x9 5000 600  0
+		>;
+		status = "ok";
+	};

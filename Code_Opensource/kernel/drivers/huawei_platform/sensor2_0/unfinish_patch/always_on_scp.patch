@@ -1,0 +1,353 @@
+From c07740ef421e0206453b2501028a28eebdcc8b74 Mon Sep 17 00:00:00 2001
+From: z00524316 <z00524316@notesmail.huawei.com>
+Date: Sat, 19 Dec 2020 16:38:34 +0800
+Subject: [PATCH] TicketNo:AR000F9P5Q Description:als vol change to
+
+Team:PDU_DRV
+Feature or Bugfix:Feature
+Binary Source:No
+PrivateCode(Yes/No):No
+
+Change-Id: I2a252dbe8bbe316c7c25b3f6a9793bceca7f7a4d
+---
+ middleware/contexthub/MEMS_Driver/alsps/alsps.c   | 39 ++++++++++++--
+ middleware/contexthub/MEMS_Driver/alsps/tcs3701.c | 64 ++++++++++++++++++++++-
+ middleware/contexthub/contexthub_core.c           | 18 +++++++
+ middleware/contexthub/contexthub_core.h           |  5 +-
+ middleware/contexthub/contexthub_fw.c             | 18 +++++++
+ middleware/contexthub/contexthub_fw.h             |  2 +
+ middleware/contexthub/sub_cmd.h                   | 23 ++++++++
+ 7 files changed, 164 insertions(+), 5 deletions(-)
+ create mode 100644 middleware/contexthub/sub_cmd.h
+
+diff --git a/middleware/contexthub/MEMS_Driver/alsps/alsps.c b/middleware/contexthub/MEMS_Driver/alsps/alsps.c
+index e2c2b48..30aa13f 100755
+--- a/middleware/contexthub/MEMS_Driver/alsps/alsps.c
++++ b/middleware/contexthub/MEMS_Driver/alsps/alsps.c
+@@ -630,7 +630,7 @@ static int alsRecvData(const uint8_t *data, int size)
+     return 0;
+ }
+ 
+-static void alsGetData(uint32_t sequence, SCP_SENSOR_HUB_REQ *req,
++static void sendCommonMessage(uint32_t sequence, SCP_SENSOR_HUB_REQ *req,
+         int (*ack)(uint32_t, SCP_SENSOR_HUB_REQ *, void *, int))
+ {
+     struct broadcast_message *bm = sensor_prepare_event();
+@@ -643,6 +643,12 @@ static void alsGetData(uint32_t sequence, SCP_SENSOR_HUB_REQ *req,
+     sensor_broadcast_event(deputy, bm, SENS_TYPE_ALS, EVENT_FACTORY, sizeof(*send));
+ }
+ 
++static void alsGetData(uint32_t sequence, SCP_SENSOR_HUB_REQ *req,
++        int (*ack)(uint32_t, SCP_SENSOR_HUB_REQ *, void *, int))
++{
++    sendCommonMessage(sequence, req, ack);
++}
++
+ static void alsGetSensorInfo(uint32_t sequence, SCP_SENSOR_HUB_REQ *req,
+         int (*ack)(uint32_t, SCP_SENSOR_HUB_REQ *, void *, int))
+ {
+@@ -659,6 +665,18 @@ static void alsGetSensorInfo(uint32_t sequence, SCP_SENSOR_HUB_REQ *req,
+     sensor_broadcast_event(deputy, bm, SENS_TYPE_ALS, EVENT_FACTORY, sizeof(*send));
+ }
+ 
++static void alsCmdControl(uint32_t sequence, SCP_SENSOR_HUB_REQ *req,
++        int (*ack)(uint32_t, SCP_SENSOR_HUB_REQ *, void *, int))
++{
++    switch (req->data[0]) {
++        case SUB_CMD_CHANGE_ALWAYS_ON_STATUS:
++        default:
++            sendCommonMessage(sequence, req, ack);
++            break;
++    }
++}
++
++
+ static int alsInitDone(const uint8_t *data, int size)
+ {
+     struct sensorCoreInfo mInfo;
+@@ -674,10 +692,24 @@ static int alsInitDone(const uint8_t *data, int size)
+     mInfo.sensType = SENS_TYPE_ALS;
+     mInfo.getData = alsGetData;
+     mInfo.getSensorInfo = alsGetSensorInfo;
++    mInfo.commandControl = alsCmdControl;
+     sensorCoreRegister(&mInfo);
+     return 0;
+ }
+ 
++static void cmdControlDoneCallback(struct factory_param *recv)
++{
++    switch (recv->req->data[0])
++    {
++        case SUB_CMD_CHANGE_ALWAYS_ON_STATUS:
++            recv->ack(recv->sequence, recv->req, NULL, 0);
++            break;
++        default:
++            osLog(LOG_ERROR, "%s go with default\n", __func__);
++            break;
++    }
++}
++
+ static int alsFactoryDone(const uint8_t *data, int size)
+ {
+     struct data_unit_t factory_data;
+@@ -694,9 +726,10 @@ static int alsFactoryDone(const uint8_t *data, int size)
+             if (recv->subaction == CUST_ACTION_GET_SENSOR_INFO) {
+                 recv->ack(recv->sequence, recv->req, recv->data, 0);
+             }
+-
+             break;
+-
++        case SENSOR_HUB_CMD_CONTROL:
++            cmdControlDoneCallback(recv);
++            break;
+         default:
+             break;
+     }
+diff --git a/middleware/contexthub/MEMS_Driver/alsps/tcs3701.c b/middleware/contexthub/MEMS_Driver/alsps/tcs3701.c
+index fffea40..a2c380d 100755
+--- a/middleware/contexthub/MEMS_Driver/alsps/tcs3701.c
++++ b/middleware/contexthub/MEMS_Driver/alsps/tcs3701.c
+@@ -393,6 +393,7 @@ static uint16_t g_data_counter;
+ static uint16_t g_buffer_full;
+ static uint16_t g_stable_counter;
+ static bool g_ps_first_enable = true;
++static uint8_t tcs3701_als_always_on_flag = 1;
+ 
+ #define far_threshold(x) (g_min_proximity < (x) ? (x) : g_min_proximity)
+ static uint32_t get_near_threshold(uint32_t x)
+@@ -1076,13 +1077,37 @@ static int tcs3701_als_enable(const uint8_t *data, int size)
+ 
+ static int tcs3701_als_disable(const uint8_t *data, int size)
+ {
++	rt_timer_stop(&dev.timer[ALS]);
++	if (tcs3701_als_always_on_flag) {
++		osLog(LOG_INFO, "tcs3701_als is not closed, because tcs3701 is set to always on\n");
++		return SUCCESS;
++	}
+ 	dev.als_enabled = false;
+ 	tcs3701_i2c_set_field(DAX_REG_ENABLE, DAX_AEN_SHIFT, BUF_OFFSET_1, BUF_OFFSET_0);
+ 	osLog(LOG_INFO, "%s success\n", __func__);
+-	rt_timer_stop(&dev.timer[ALS]);
+ 	return 0;
+ }
+ 
++/* upload als data for face unlock */
++static void tcs3701_upload_immediately()
++{
++	struct broadcast_message *bm = NULL;
++	struct data_param *send = NULL;
++
++	if (dev.als_last_sample < 0) {
++		osLog(LOG_ERROR, "%s, als not ready\n", __func__);
++		return;
++	}
++
++	bm = sensor_prepare_event();
++	send = (struct data_param *)bm->buffer;
++	send->timestamp = rtcGetTime();
++	send->values[BUF_OFFSET_0] = (float)dev.als_last_sample;
++	send->values[BUF_OFFSET_1] = (float)dev.cct;
++	send->values[BUF_OFFSET_2] = (float)dev.calc_ir;
++	sensor_broadcast_event(principal, bm, SENS_TYPE_ALS, EVENT_DATA, sizeof(*send));
++}
++
+ /**
+  * tcs3701_als_batch - called when received batch cmd.
+  * @data:
+@@ -1098,6 +1123,8 @@ static int tcs3701_als_batch(const uint8_t *data, int size)
+ 	if (param->delay < MIN_DELAY_TIME)
+ 		param->delay = MIN_DELAY_TIME;
+ 	rt_timer_start(&dev.timer[ALS], param->delay, false);
++	if (tcs3701_als_always_on_flag)
++		tcs3701_upload_immediately();
+ 	return 0;
+ }
+ 
+@@ -1385,6 +1412,39 @@ static int tcs3701_als_sample(const uint8_t *data, int size)
+ 	return sensor_broadcast_event(principal, bm, SENS_TYPE_ALS, EVENT_DATA, sizeof(*send));
+ }
+ 
++static void tcs3701_als_always_on_precess(void)
++{
++	int ret;
++	if (tcs3701_als_always_on_flag && !dev.als_enabled) {
++		ret = tcs3701_als_enable(NULL, 0);
++		if (ret)
++			osLog(LOG_ERROR, "%s enable als fail\n", __func__);
++	}
++}
++
++static void tcs3701_als_set_work_mode(int mode)
++{
++	tcs3701_als_always_on_flag = mode & 0xFF;
++	tcs3701_als_always_on_precess();
++	osLog(LOG_INFO, "%s : set flag to %d\n", __func__, tcs3701_als_always_on_flag);
++}
++
++static int tcs3701_process_cmd(struct factory_param *recv, struct broadcast_message *bm, struct factory_param *send)
++{
++	bm = sensor_prepare_event();
++	send = (struct factory_param *)bm->buffer;
++	memcpy(send, recv, sizeof(*send));
++	osLog(LOG_INFO, "%s : action=%d\n", __func__, recv->req->data[0]);
++	switch (recv->req->data[0]) {
++		case SUB_CMD_CHANGE_ALWAYS_ON_STATUS:
++			tcs3701_als_set_work_mode(recv->req->data[1]);
++			break;
++		default:
++			osLog(LOG_ERROR, "%s : default process, just return\n", __func__);
++	}
++	return sensor_broadcast_event(principal, bm, SENS_TYPE_ALS, EVENT_FACTORY_DONE, sizeof(*send));
++}
++
+ static int tcs3701_als_factory(const uint8_t *data, int size)
+ {
+ 	struct factory_param *recv = (struct factory_param *)data;
+@@ -1410,6 +1470,8 @@ static int tcs3701_als_factory(const uint8_t *data, int size)
+ 			return sensor_broadcast_event(principal, bm, SENS_TYPE_ALS, EVENT_FACTORY_DONE, sizeof(*send));
+ 		}
+ 		return SUCCESS;
++		case SENSOR_HUB_CMD_CONTROL:
++			return tcs3701_process_cmd(recv, bm, send);
+ 	default:
+ 		return SUCCESS;
+ 	}
+diff --git a/middleware/contexthub/contexthub_core.c b/middleware/contexthub/contexthub_core.c
+index 022ec89..4035eab 100644
+--- a/middleware/contexthub/contexthub_core.c
++++ b/middleware/contexthub/contexthub_core.c
+@@ -111,6 +111,24 @@ int sensorCoreSetDataType(uint8_t sensType, uint32_t sequence, SCP_SENSOR_HUB_RE
+     return 0;
+ }
+ 
++int sensorCoreCmdControl(uint8_t sensType, uint32_t sequence, SCP_SENSOR_HUB_REQ *req,
++        int (*ack)(uint32_t, SCP_SENSOR_HUB_REQ *, void *, int))
++{
++    struct sensorCoreInfo *mCoreInfo = NULL;
++
++    int8_t handle = mSensorCoreList[sensType];
++    if (!atomicBitsetGetBit(mSensorCoreUsed, handle))
++        return -1;
++    mCoreInfo = &mInfoCoreList[handle];
++
++    if (!mCoreInfo->commandControl) {
++        osLog(LOG_ERROR, "sensorCoreSetDataType not exist\n");
++        ack(sequence, req, NULL, 0);
++        return -1;
++    }
++    mCoreInfo->commandControl(sequence, req, ack);
++    return 0;
++}
+ 
+ int sensorCoreRegister(struct sensorCoreInfo *mInfo)
+ {
+diff --git a/middleware/contexthub/contexthub_core.h b/middleware/contexthub/contexthub_core.h
+index 3db9030..5336cd8 100644
+--- a/middleware/contexthub/contexthub_core.h
++++ b/middleware/contexthub/contexthub_core.h
+@@ -60,6 +60,8 @@ struct sensorCoreInfo {
+         int (*ack)(uint32_t, SCP_SENSOR_HUB_REQ *, void *, int));
+     void (*setDataType)(uint32_t sequence, SCP_SENSOR_HUB_REQ *req,
+         int (*ack)(uint32_t, SCP_SENSOR_HUB_REQ *, void *, int));
++    void (*commandControl)(uint32_t sequence, SCP_SENSOR_HUB_REQ *req,
++        int (*ack)(uint32_t, SCP_SENSOR_HUB_REQ *, void *, int));
+ };
+ void sensorCoreInit(void);
+ int sensorCoreRegister(struct sensorCoreInfo *mInfo);
+@@ -71,6 +73,7 @@ int sensorCoreGetSensorInfo(uint8_t sensType, uint32_t sequence, SCP_SENSOR_HUB_
+         int (*ack)(uint32_t, SCP_SENSOR_HUB_REQ *, void *, int));
+ int sensorCoreSetDataType(uint8_t sensType, uint32_t sequence, SCP_SENSOR_HUB_REQ *req,
+         int (*ack)(uint32_t, SCP_SENSOR_HUB_REQ *, void *, int));
+-
++int sensorCoreCmdControl(uint8_t sensType, uint32_t sequence, SCP_SENSOR_HUB_REQ *req,
++        int (*ack)(uint32_t, SCP_SENSOR_HUB_REQ *, void *, int));
+ #endif
+ 
+diff --git a/middleware/contexthub/contexthub_fw.c b/middleware/contexthub/contexthub_fw.c
+index cd344ec..d7c8a6b 100755
+--- a/middleware/contexthub/contexthub_fw.c
++++ b/middleware/contexthub/contexthub_fw.c
+@@ -1953,6 +1953,22 @@ static int contextHubFwSetDataTypeAck(SCP_SENSOR_HUB_REQ *req,
+     return 0;
+ }
+ 
++static int contextHubFwCmdControl(uint32_t sequence, SCP_SENSOR_HUB_REQ *req)
++{
++    uint8_t mtkType;
++    mtkType = apIdToMtkType(req->sensorType);
++    return sensorCoreCmdControl(mtkTypeToChreType(mtkType), sequence, req, contextHubIpiRxAck);
++}
++
++static int contextHubFwCmdControlAck(SCP_SENSOR_HUB_REQ *req,
++        SCP_SENSOR_HUB_DATA *rsp, void *data, int errCode)
++{
++    rsp->rsp.sensorType = req->sensorType;
++    rsp->rsp.action = req->action;
++    rsp->rsp.errCode = errCode;
++    return 0;
++}
++
+ const static struct ContextHubCmd mContextHubCmds[] = {
+     CONTEXTHUB_CMD(SENSOR_HUB_GET_DATA,
+         contextHubFwGetData, contextHubFwGetDataAck),
+@@ -1966,6 +1982,8 @@ const static struct ContextHubCmd mContextHubCmds[] = {
+         contextHubFwRawData, contextHubFwRawDataAck),
+     CONTEXTHUB_CMD(SENSOR_HUB_SET_DATA_TYPE,
+         contextHubFwSetDataType, contextHubFwSetDataTypeAck),
++    CONTEXTHUB_CMD(SENSOR_HUB_CMD_CONTROL,
++        contextHubFwCmdControl, contextHubFwCmdControlAck),
+ };
+ const struct ContextHubCmd *contextHubFindCmd(uint32_t packetReason)
+ {
+diff --git a/middleware/contexthub/contexthub_fw.h b/middleware/contexthub/contexthub_fw.h
+index 608ffb3..13817f4 100755
+--- a/middleware/contexthub/contexthub_fw.h
++++ b/middleware/contexthub/contexthub_fw.h
+@@ -39,6 +39,7 @@
+ #include <hostIntf.h>
+ #include <eventnums.h>
+ #include <plat/inc/mtkQ.h>
++#include "sub_cmd.h"
+ 
+ #define SENS_TYPE_GYRO_BIAS        (SENS_TYPE_FIRST_USER + 0)
+ #define SENS_TYPE_MAG_BIAS        (SENS_TYPE_FIRST_USER + 1)
+@@ -428,6 +429,7 @@ struct sensorFIFO {
+ #define    SENSOR_HUB_POWER_NOTIFY  9
+ #define    SENSOR_HUB_RAW_DATA      10
+ #define    SENSOR_HUB_SET_DATA_TYPE 11
++#define    SENSOR_HUB_CMD_CONTROL   12
+ 
+ #define SCP_SENSOR_HUB_TEMP_BUFSIZE     256
+ //#define SCP_SENSOR_HUB_FIFO_SIZE        0x800000
+diff --git a/middleware/contexthub/sub_cmd.h b/middleware/contexthub/sub_cmd.h
+new file mode 100644
+index 0000000..c909359
+--- /dev/null
++++ b/middleware/contexthub/sub_cmd.h
+@@ -0,0 +1,23 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
++ * Description: ps channel header file
++ * Author: yaohenglong
++ * Create: 2020-06-16
++ */
++#ifndef __SUB_CMD_H__
++#define __SUB_CMD_H__
++
++typedef enum {
++	/* als */
++	SUB_CMD_SET_ALS_PA = 0x20,
++	SUB_CMD_UPDATE_BL_LEVEL,
++	SUB_CMD_UPDATE_RGB_DATA,
++	SUB_CMD_GET_FACTORY_PARA,
++	SUB_CMD_CHANGE_DC_STATUS,
++	SUB_CMD_CHANGE_ALWAYS_ON_STATUS,
++	SUB_CMD_UPDATE_NOISE_DATA,
++	SUB_CMD_ALS_LCD_FREQ_REQ,
++	SUB_CMD_SET_ALS_UD_CALIB_DATA,
++	SUB_CMD_UPDATE_AOD_STATUS,
++} obj_sub_cmd_t;
++#endif
+-- 
+1.9.1
+

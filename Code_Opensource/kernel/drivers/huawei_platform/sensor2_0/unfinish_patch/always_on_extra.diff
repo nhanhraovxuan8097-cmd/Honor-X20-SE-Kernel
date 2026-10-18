@@ -1,0 +1,84 @@
+diff --git a/drivers/sensor2_0/als_route.c b/drivers/sensor2_0/als_route.c
+index 6603d33..7b48730 100644
+--- a/drivers/sensor2_0/als_route.c
++++ b/drivers/sensor2_0/als_route.c
+@@ -6,6 +6,7 @@
+  */
+ 
+ #include <linux/slab.h>
++#include <linux/kernel.h>
+ #include <securec.h>
+ #include <huawei_platform/oeminfo/oeminfo_def.h>
+ #include "sensor_scp.h"
+@@ -126,3 +127,24 @@ ssize_t als_under_tp_calidata_show(int32_t sensor_type, struct device *dev,
+ 
+ 	return (ssize_t)ret;
+ }
++ssize_t als_always_on_store(int32_t sensor_type, struct device *dev,
++	struct device_attribute *attr, const char *buf, size_t size)
++{
++	int als_always_on;
++	int ret;
++	struct custom_cmd cmd;
++	if (!dev || !attr || !buf) {
++		pr_err("%s : invalid params, sensor_type: %d, size: %zu\n",
++			__func__, sensor_type, size);
++		return -1;
++	}
++	als_always_on = simple_strtol(buf, NULL, FORMAT_DEC);
++	cmd.data[0] = CUST_CMD_CONTROL;
++	cmd.data[1] = 2;
++	cmd.data[2] = SUB_CMD_CHANGE_ALWAYS_ON_STATUS;
++	cmd.data[3] = als_always_on;
++	pr_info("set always on info = %d\n", als_always_on);
++	if (send_scp_common_cmd(sensor_type, &cmd))
++		return -1;
++	return size;
++}
+\ No newline at end of file
+diff --git a/drivers/sensor2_0/als_route.h b/drivers/sensor2_0/als_route.h
+index 735098d..1af8576 100644
+--- a/drivers/sensor2_0/als_route.h
++++ b/drivers/sensor2_0/als_route.h
+@@ -11,7 +11,10 @@
+ #define MAX_STR_SIZE 1024
+ #define ALS_UNDER_TP_CALDATA_SIZE 59
+ #define OEMINFO_ALS_UNDER_TP_CALIDATA 16
++#define FORMAT_DEC 10
+ 
++ssize_t als_always_on_store(int32_t sensor_type, struct device *dev,
++	struct device_attribute *attr, const char *buf, size_t size);
+ ssize_t als_under_tp_calidata_store(int32_t tag, struct device *dev,
+ 	struct device_attribute *attr, const char *buf, size_t size);
+ ssize_t als_under_tp_calidata_show(int32_t sensor_type, struct device *dev,
+diff --git a/drivers/sensor2_0/sensor_sysfs.c b/drivers/sensor2_0/sensor_sysfs.c
+index de065a5..43f65c0 100755
+--- a/drivers/sensor2_0/sensor_sysfs.c
++++ b/drivers/sensor2_0/sensor_sysfs.c
+@@ -541,6 +541,18 @@ static ssize_t show_als_under_tp_rawdata(struct device *dev,
+ static DEVICE_ATTR(als_calibrate_under_tp, 0660,
+ 	show_als_under_tp_rawdata, store_als_under_tp_rawdata);
+ 
++static ssize_t attr_set_als_always_on_store(struct device *dev,
++	struct device_attribute *attr, const char *buf, size_t size)
++{
++	struct sensor_cookie *data =
++		(struct sensor_cookie *)dev_get_drvdata(dev);
++
++	CHECK_SENSOR_COOKIE(data);
++	return als_always_on_store(data->sensor_type, dev, attr, buf, size);
++}
++
++static DEVICE_ATTR(always_on, 0660, NULL, attr_set_als_always_on_store);
++
+ static void update_last_time()
+ {
+ 	do_gettimeofday(&time_last);
+@@ -644,6 +656,7 @@ static struct attribute *als_sensor_attrs[] = {
+ 	&dev_attr_calibrate_timeout.attr,
+ 	&dev_attr_set_als_under_tp_calidata.attr,
+ 	&dev_attr_als_calibrate_under_tp.attr,
++	&dev_attr_always_on.attr,
+ 	NULL,
+ };
+ 

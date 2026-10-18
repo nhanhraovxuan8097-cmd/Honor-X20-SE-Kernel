@@ -1,0 +1,1 @@
+obj-$(CONFIG_RT9426A_FUEL_GAUGE) += rt9426a_battery.o

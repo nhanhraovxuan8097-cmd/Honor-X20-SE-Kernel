@@ -1,0 +1,9 @@
+#
+# huawei wireless firmware drivers
+#
+
+config WIRELESS_FIRMWARE
+	bool "wireless firmware"
+	default n
+	help
+	  Say Y here to enable wireless firmware driver.

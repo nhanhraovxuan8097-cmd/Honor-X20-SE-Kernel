@@ -1,0 +1,1 @@
+obj-$(CONFIG_MEMINFO_DUMP)	+= process_mem.o

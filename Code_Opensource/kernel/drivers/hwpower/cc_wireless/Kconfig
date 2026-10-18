@@ -1,0 +1,5 @@
+#
+# huawei wireless drivers
+#
+
+source "drivers/hwpower/cc_wireless/wireless_firmware/Kconfig"

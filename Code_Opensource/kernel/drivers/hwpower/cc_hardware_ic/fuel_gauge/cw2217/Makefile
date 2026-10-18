@@ -1,0 +1,1 @@
+obj-$(CONFIG_CW2217_FUEL_GAUGE) += cw2217_fuel_gauge.o

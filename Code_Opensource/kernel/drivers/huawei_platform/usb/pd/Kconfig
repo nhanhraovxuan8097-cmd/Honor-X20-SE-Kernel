@@ -1,0 +1,5 @@
+config HUAWEI_PD
+        bool "huawei_pd"
+        default n
+
+source "drivers/huawei_platform/usb/pd/fusb302b/Kconfig"

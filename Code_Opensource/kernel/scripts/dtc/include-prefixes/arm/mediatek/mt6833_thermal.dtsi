@@ -1,0 +1,19 @@
+/{
+	shell: shell_frame@0 {
+		compatible = "hw,shell-temp";
+		status = "ok";
+	};
+
+	shell_front: shell_front@0 {
+		compatible = "hw,shell-temp";
+		status = "ok";
+	};
+
+	shell_back: shell_back@0 {
+		compatible = "hw,shell-temp";
+		status = "ok";
+	};
+};
+
+
+

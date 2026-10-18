@@ -1,0 +1,7 @@
+config HUAWEI_USB_SHORT_CIRCUIT_PROTECT
+	bool "huawei usb short circuit protect"
+	default n
+
+config MT6873_USCP_ADC
+	bool "mt6873_uscp_adc"
+	default n

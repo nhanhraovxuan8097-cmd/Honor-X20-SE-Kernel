@@ -1,0 +1,117 @@
+diff --git a/middleware/contexthub/MEMS_Driver/alsps/syh399.c b/middleware/contexthub/MEMS_Driver/alsps/syh399.c
+old mode 100755
+new mode 100644
+index dd6d259..4cc2cfe
+--- a/middleware/contexthub/MEMS_Driver/alsps/syh399.c
++++ b/middleware/contexthub/MEMS_Driver/alsps/syh399.c
+@@ -42,6 +42,7 @@ enum {
+ 	SYH399_WN,
+ 	SYH399_FT,
+ 	SYH399_CP = 10,
++	SYH399_JLH = 12,
+ };
+ 
+ static const struct syh399_reg_t syh399_als_init_reg_t[] = {
+@@ -127,6 +128,26 @@ static struct lcd_params lcd_params_by_type_product[] = {
+ 		.lcd_type = "P226A5111",
+ 		.params = { 0.0113, 0.0919, 2.0, 12, 30.0, 0.8373, 1.0, 0.2489, 0.5325, 266560.0, 32628.0 },
+ 	},
++	{
++		.product_id = SYH399_JLH,
++		.lcd_type = "B2429M1100",
++		.params = { 0.0113, 0.0919, 2.0, 12, 30.0, 0.8373, 1.0, 0.2489, 0.5325, 266560.0, 32628.0 },
++	},
++	{
++		.product_id = SYH399_JLH,
++		.lcd_type = "B242A51100",
++		.params = { 0.0113, 0.0919, 2.0, 12, 30.0, 0.8373, 1.0, 0.2489, 0.5325, 266560.0, 32628.0 },
++	},
++	{
++		.product_id = SYH399_JLH,
++		.lcd_type = "B2429M1300",
++		.params = { 0.0113, 0.0919, 2.0, 12, 30.0, 0.8373, 1.0, 0.2489, 0.5325, 266560.0, 32628.0 },
++	},
++	{
++		.product_id = SYH399_JLH,
++		.lcd_type = "B242A51300",
++		.params = { 0.0113, 0.0919, 2.0, 12, 30.0, 0.8373, 1.0, 0.2489, 0.5325, 266560.0, 32628.0 },
++	},
+ };
+ 
+ static struct als_para_t *syh399_als_para;
+@@ -297,7 +318,7 @@ static void set_als_prara()
+ {
+ 	uint32_t i;
+ 
+-	for (i = 0; i < sizeof(lcd_params_by_type_product); i++) {
++	for (i = 0; i < sizeof(lcd_params_by_type_product) / sizeof(struct lcd_params); i++) {
+ 		if (!strcmp(lcd_params_by_type_product[i].lcd_type, s_lcd_type) &&
+ 			lcd_params_by_type_product[i].product_id == s_product_id) {
+ 			osLog(LOG_INFO, "%s : success\n", __func__);
+diff --git a/middleware/contexthub/MEMS_Driver/alsps/tsl2591.c b/middleware/contexthub/MEMS_Driver/alsps/tsl2591.c
+index e55064d..01145ad 100644
+--- a/middleware/contexthub/MEMS_Driver/alsps/tsl2591.c
++++ b/middleware/contexthub/MEMS_Driver/alsps/tsl2591.c
+@@ -184,12 +184,22 @@ static struct lcd_params lcd_params_by_type_product[] = {
+ 	{
+ 		.product_id = TSL2591_JL,
+ 		.lcd_type = "B2429M1100",
+-		.params = { 386, 1560, 4502, 7698, 4185, 7115, 400, 60, 0, 26, 5825 },
++		.params = { 386, 1560, 4502, 7698, 4185, 7115, 400, 60, 0, 26, 1165 },
+ 	},
+ 	{
+ 		.product_id = TSL2591_JL,
+-		.lcd_type = "G1949M270",
+-		.params = { 386, 1560, 4502, 7698, 4185, 7115, 400, 60, 0, 26, 5825 },
++		.lcd_type = "B242A51100",
++		.params = { 386, 1560, 4502, 7698, 4185, 7115, 400, 60, 0, 26, 1165 },
++	},
++	{
++		.product_id = TSL2591_JL,
++		.lcd_type = "B2429M1300",
++		.params = { 386, 1560, 4502, 7698, 4185, 7115, 400, 60, 0, 26, 1165 },
++	},
++	{
++		.product_id = TSL2591_JL,
++		.lcd_type = "B242A51300",
++		.params = { 386, 1560, 4502, 7698, 4185, 7115, 400, 60, 0, 26, 1165 },
+ 	},
+ };
+ 
+@@ -584,6 +594,8 @@ static void tsl2591_lux_calc_report(void)
+ 	uint32_t ch1;
+ 	uint32_t ch0;
+ 	int ret;
++	float temp_scale;
++	uint32_t temp_ch0;
+ 
+ 	calc_lux.gain = tsl2591_get_gain();
+ 	calc_lux.atime = tsl2591_get_atime();
+@@ -628,13 +640,20 @@ static void tsl2591_lux_calc_report(void)
+ 	tsl2591_dev.als_inf.ch0 = (uint32_t)((float)tsl2591_dev.als_inf.ch0 * visible_ratio);
+ 	tsl2591_dev.als_inf.ch1 = (uint32_t)((float)tsl2591_dev.als_inf.ch1 * visible_ratio);
+ 	tsl2591_channel_correction(calc_lux.gain, &ch0, &ch1);
+-	calc_lux.ch0 = ch0;
+-	calc_lux.ch1 = ch1;
+-
+-	calc_lux.lux1 = (int64_t)ch0 * 1000 - (int64_t)ch1 * b_coef;
+-	calc_lux.lux2 = (int64_t)ch0 * c_coef - (int64_t)ch1 * d_coef;
+-	calc_lux.lux3 = (int64_t)ch0 * e_coef - (int64_t)ch1 * f_coef;
+-	tsl2591_sam_lux_calc(&calc_lux);
++	if (s_product_id == TSL2591_JL) {
++		temp_scale = ((float)(als_gains[2] * als_atimes[0])) / (calc_lux.gain * calc_lux.atime);
++		temp_ch0 = (uint32_t)(ch0 * temp_scale);
++		tsl2591_dev.als_inf.lux = (uint32_t)(temp_ch0 * 1.7);
++		osLog(LOG_INFO, " %s lux value %u\n",
++			__func__, tsl2591_dev.als_inf.lux);
++	} else {
++		calc_lux.ch0 = ch0;
++		calc_lux.ch1 = ch1;
++		calc_lux.lux1 = (int64_t)ch0 * 1000 - (int64_t)ch1 * b_coef;
++		calc_lux.lux2 = (int64_t)ch0 * c_coef - (int64_t)ch1 * d_coef;
++		calc_lux.lux3 = (int64_t)ch0 * e_coef - (int64_t)ch1 * f_coef;
++		tsl2591_sam_lux_calc(&calc_lux);
++	}
+ }
+ 
+ static int do_dark_calibration(void)

@@ -1,0 +1,7 @@
+config KERNEL_SAR_A96T356
+	bool "abov a96t356 for MediaTek package"
+	default n
+	help
+	  It support different type sensor
+	  in this platform. If this option
+	  is set, it will support sar sensor A96T356.

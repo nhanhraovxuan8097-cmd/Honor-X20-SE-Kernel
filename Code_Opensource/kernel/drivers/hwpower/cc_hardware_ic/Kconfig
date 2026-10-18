@@ -1,0 +1,22 @@
+#
+# huawei hardware ic drivers
+#
+
+source "drivers/hwpower/cc_hardware_ic/buck_boost/Kconfig"
+source "drivers/hwpower/cc_hardware_ic/charge_pump/Kconfig"
+source "drivers/hwpower/cc_hardware_ic/switch_capacitor/Kconfig"
+source "drivers/hwpower/cc_hardware_ic/boost_5v/Kconfig"
+source "drivers/hwpower/cc_hardware_ic/wireless_charge_ic/Kconfig"
+source "drivers/hwpower/cc_hardware_ic/charge_adc_monitor/Kconfig"
+source "drivers/hwpower/cc_hardware_ic/fuel_gauge/Kconfig"
+
+config I2C_OPERATION_IN_COMPLETE
+        bool "i2c_operation_in_complete"
+        default n
+        help
+        Say Y here to put i2c operation in complete api.
+config WIRELESS_CHARGER_IC
+        bool "wireless_charge_ic"
+        default n
+        help
+        Say Y here to enable wireless charger IC.

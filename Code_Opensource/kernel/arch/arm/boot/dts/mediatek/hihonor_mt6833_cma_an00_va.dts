@@ -1,0 +1,19 @@
+/dts-v1/;
+/plugin/;
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#ifndef CONFIG_FPGA_EARLY_PORTING
+#include <dt-bindings/pinctrl/mt6833-pinfunc.h>
+#endif
+#include "mediatek/hihonor_mt6833_cma_an00_va/hihonor.dtsi"
+
+&rootparam {
+	mtk,boardid = <4 0 6 4>;
+	mtk,board_name = "CMA_AN00_VA";
+	mtk,product_name = "CMA-AN00";
+	hardware_version = "HN1CMAM";
+};
+
+#include <hihonor_mt6833_cma/cust.dtsi>
+
+/*End of this file, DO NOT ADD ANYTHING HERE*/

@@ -1,0 +1,164 @@
+/* Box ID END */
+&pio {
+	/* speaker box up left ID1 gpio config */
+	speaker_box_up_l_id1_on: speaker_box_up_l_id1_on {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO74__FUNC_GPIO74>;
+			slew-rate = <0>;
+			bias-pull-up;
+		};
+	};
+	speaker_box_up_l_id1_off: speaker_box_up_l_id1_off {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO74__FUNC_GPIO74>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+	};
+
+	/* speaker box up left ID2 gpio config */
+	speaker_box_up_l_id2_on: speaker_box_up_l_id2_on {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO78__FUNC_GPIO78>;
+			slew-rate = <0>;
+			bias-pull-up;
+		};
+	};
+	speaker_box_up_l_id2_off: speaker_box_up_l_id2_off {
+	pins_cmd_dat {
+			pinmux = <PINMUX_GPIO78__FUNC_GPIO78>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+	};
+
+	/* speaker box up right ID1 gpio config */
+	speaker_box_up_r_id1_on: speaker_box_up_r_id1_on {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO79__FUNC_GPIO79>;
+			slew-rate = <0>;
+			bias-pull-up;
+		};
+	};
+	speaker_box_up_r_id1_off: speaker_box_up_r_id1_off {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO79__FUNC_GPIO79>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+	};
+
+	/* speaker box up right ID2 gpio config */
+	speaker_box_up_r_id2_on: speaker_box_up_r_id2_on {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO130__FUNC_GPIO130>;
+			slew-rate = <0>;
+			bias-pull-up;
+		};
+	};
+	speaker_box_up_r_id2_off: speaker_box_up_r_id2_off {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO130__FUNC_GPIO130>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+	};
+
+	/* speaker box down left ID1 gpio config */
+	speaker_box_dw_l_id1_on: speaker_box_dw_l_id1_on {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO183__FUNC_GPIO183>;
+			slew-rate = <0>;
+			bias-pull-up;
+		};
+	};
+	speaker_box_dw_l_id1_off: speaker_box_dw_l_id1_off {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO183__FUNC_GPIO183>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+	};
+
+	/* speaker box down left ID2 gpio config */
+	speaker_box_dw_l_id2_on: speaker_box_dw_l_id2_on {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO187__FUNC_GPIO187>;
+			slew-rate = <0>;
+			bias-pull-up;
+		};
+	};
+	speaker_box_dw_l_id2_off: speaker_box_dw_l_id2_off {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO187__FUNC_GPIO187>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+	};
+
+	/* speaker box down right ID1 gpio config */
+	speaker_box_dw_r_id1_on: speaker_box_dw_r_id1_on {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO189__FUNC_GPIO189>;
+			slew-rate = <0>;
+			bias-pull-up;
+		};
+	};
+	speaker_box_dw_r_id1_off: speaker_box_dw_r_id1_off {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO189__FUNC_GPIO189>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+	};
+
+	/* speaker box down right ID2 gpio config */
+	speaker_box_dw_r_id2_on: speaker_box_dw_r_id2_on {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO190__FUNC_GPIO190>;
+			slew-rate = <0>;
+			bias-pull-up;
+		};
+	};
+	speaker_box_dw_r_id2_off: speaker_box_dw_r_id2_off {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO190__FUNC_GPIO190>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+	};
+};
+
+&deviceboxID {
+	compatible = "huawei,deviceboxID";
+	status = "ok";
+	check_mode = "gpio";
+	box_num = <4>;
+	enable_boxID = <1 1 1 1>;
+	gpio_num = <2 2 2 2>;
+	speaker_map = <1 2 0 3 4 0>;
+	receiver_map = <1 2 0 3 4 0>;
+	box3rd_map = <1 2 0 3 4 0>;
+	box4th_map = <1 2 0 3 4 0>;
+
+	gpio_speakerID = <&pio 74 0
+			  &pio 78 0>;
+	gpio_receiverID = <&pio 79 0
+			  &pio 130 0>;
+	gpio_3rdboxID = <&pio 183 0
+			 &pio 187 0>;
+	gpio_4thboxID = <&pio 189 0
+			 &pio 190 0>;
+
+	pinctrl-names = "default",
+			"idle";
+	pinctrl-0 = <&speaker_box_up_l_id1_on &speaker_box_up_l_id2_on
+		     &speaker_box_up_r_id1_on &speaker_box_up_r_id2_on
+		     &speaker_box_dw_l_id1_on &speaker_box_dw_l_id2_on
+		     &speaker_box_dw_r_id1_on &speaker_box_dw_r_id2_on >;
+	pinctrl-1 = <&speaker_box_up_l_id1_off &speaker_box_up_l_id2_off
+		     &speaker_box_up_r_id1_off &speaker_box_up_r_id2_off
+		     &speaker_box_dw_l_id1_off &speaker_box_dw_l_id2_off
+		     &speaker_box_dw_r_id1_off &speaker_box_dw_r_id2_off >;
+};
+/* Box ID END */

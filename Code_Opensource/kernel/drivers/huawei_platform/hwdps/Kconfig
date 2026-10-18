@@ -1,0 +1,6 @@
+config hwdps
+	bool "hwdps System"
+	default n
+	help
+	Huawei Application Authentication System
+

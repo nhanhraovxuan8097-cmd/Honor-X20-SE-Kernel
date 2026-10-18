@@ -1,0 +1,3 @@
+config RT9426_FUEL_GAUGE
+        bool "rt9426 fuel gauge"
+        default n

@@ -1,0 +1,19 @@
+/dts-v1/;
+/plugin/;
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#ifndef CONFIG_FPGA_EARLY_PORTING
+#include <dt-bindings/pinctrl/mt6833-pinfunc.h>
+#endif
+#include "mediatek/hihonor_mt6833_chlc_an00_vg/hihonor.dtsi"
+
+&rootparam {
+	mtk,boardid = <4 0 1 9>;
+	mtk,board_name = "CHL_AN00_VG";
+	mtk,product_name = "CHL-AN00";
+	hardware_version = "HN5CHLM_D";
+};
+
+#include <k6833v1_64/cust.dtsi>
+
+/*End of this file, DO NOT ADD ANYTHING HERE*/

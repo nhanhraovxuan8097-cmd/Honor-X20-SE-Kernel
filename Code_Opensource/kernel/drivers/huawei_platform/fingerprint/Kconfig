@@ -1,0 +1,6 @@
+
+config HONOR_FINGERPRINT_SUPPORT
+        tristate "fingerprint"
+        default n
+        help
+                If you say yes here you get support for fingerprint.

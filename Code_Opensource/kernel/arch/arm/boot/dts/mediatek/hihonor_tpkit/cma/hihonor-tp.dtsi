@@ -1,0 +1,145 @@
+&pio {
+	ctp_pins_default: eint0default {
+	};
+	ctp_pins_eint_as_int: eint@0 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO14__FUNC_GPIO14>;
+			slew-rate = <0>;
+			bias-disable;
+		};
+	};
+	ctp_pins_eint_output0: eintoutput0 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO14__FUNC_GPIO14>;
+			slew-rate = <1>;
+			output-low;
+		};
+	};
+	ctp_pins_eint_output1: eintoutput1 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO14__FUNC_GPIO14>;
+			slew-rate = <1>;
+			output-high;
+		};
+	};
+	ctp_pins_rst_output0: rstoutput0 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO15__FUNC_GPIO15>;
+			slew-rate = <1>;
+			output-low;
+		};
+	};
+	ctp_pins_rst_output1: rstoutput1 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO15__FUNC_GPIO15>;
+			slew-rate = <1>;
+			output-high;
+		};
+	};
+	ctp_pins_cs_output0: csoutput0 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO28__FUNC_SPI1_CSB>;
+			slew-rate = <1>;
+			output-low;
+		};
+	};
+	ctp_pins_cs_output1: csoutput1 {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO28__FUNC_SPI1_CSB>;
+			slew-rate = <1>;
+			output-high;
+		};
+	};
+	ctp_pins_spi_status: spistatus {
+		pins_cmd_dat {
+			pinmux = <PINMUX_GPIO27__FUNC_SPI1_CLK>,
+				<PINMUX_GPIO28__FUNC_SPI1_CSB>,
+				<PINMUX_GPIO29__FUNC_SPI1_MO>,
+				<PINMUX_GPIO30__FUNC_SPI1_MI>;
+			drive-strength = <3>;
+		};
+	};
+};
+
+/*ts kit*/
+&ts_kit {
+	status = "okay";
+	compatible = "huawei,ts_kit";
+	bus_type = "spi";
+	product = "cma";
+	bus_id = <1>;
+	has_virtualkey = <0>;
+	debounce = <6 0>;
+	aft_enable = <0>;	/* aft algo switch. 1 - enabel, 0 - disable*/
+	drv_stop_width = <0>;	/* always 0, can not config */
+	lcd_width = <0>;	/* always 0, can not config */
+	lcd_height = <0>;	/* always 0, can not config */
+	need_i2c_hwlock = <0>;	/* for i2c both used by ap and sensorhub */
+	register_charger_notifier = <1>;
+	hide_plain_id = <1>;
+	interrupt-parent = <&pio>;
+	interrupts = <14 IRQ_TYPE_LEVEL_LOW 0 0>;
+	cs_gpio = <&pio 28 0>;
+	pl022,com-mode = <1>;
+	pl022,interface = <0>;
+	pl022,rx-level-trig = <3>;
+	pl022,tx-level-trig = <3>;
+	pl022,ctrl-len = <7>;
+	pl022,wait-state = <0>;
+	pl022,duplex = <0>;
+	pl022,slave-tx-disable = <0>;
+	spi-max-frequency = <8000000>;
+	spi-mode = <0>;
+	cs_reset_low_delay = <10>;
+	cs_reset_high_delay = <200>;
+	mtk_spi_mlsb_config = <1>;
+	mtk_rx_mlsb = <1>;
+	mtk_tx_mlsb = <1>;
+	mtk_cs_pol = <0>;
+	mtk_sample_sel = <0>;
+	mtk_cs_setuptime = <28>;
+	recovery_update_fw = <1>;
+	node@1 {
+		compatible = "ilitek,ts_kit";
+		irq_config = <3>;
+		spi-mode = <0>;
+		spi-max-frequency = <8000000>;
+		ic_type = <2>;
+		roi_supported = <1>;
+		x_max = <720>;
+		y_max = <1600>;
+		x_max_mt = <720>;
+		y_max_mt = <1600>;
+		/* pinctl config part */
+		pinctrl-names = "default", "idle", "state_eint_as_int", "state_eint_output0",
+			"state_eint_output1","state_rst_output0","state_rst_output1",
+			"state_cs_output0", "state_cs_output1";
+		pinctrl-0 = <&ctp_pins_rst_output1 &ctp_pins_cs_output1>;
+		pinctrl-1 = <&ctp_pins_rst_output0 &ctp_pins_cs_output0>;
+		pinctrl-2 = <&ctp_pins_eint_as_int>;
+		pinctrl-3 = <&ctp_pins_eint_output0>;
+		pinctrl-4 = <&ctp_pins_eint_output1>;
+		pinctrl-5 = <&ctp_pins_rst_output0>;
+		pinctrl-6 = <&ctp_pins_rst_output1>;
+		pinctrl-7 = <&ctp_pins_cs_output0>;
+		pinctrl-8 = <&ctp_pins_cs_output1>;
+		algo_id = <1>;
+		gesture_supported = <1>;
+		download_fw_inrecovery = <1>;
+		use_lcdkit_power_notify = <1>;
+		hide_fw_name = <1>;
+		touch_switch_flag = <4>;
+		project_id_length_control = <9>;
+		only_open_once_captest_threshold = <0>;
+		tp_test_type = "Normalize_type:judge_last_result";
+		rawdata_get_timeout = <10>;
+		mtk_irq_gpio = <&pio 14 0>;
+		HCMAAI110 {
+			producer = "110";
+			compatible = "HCMAAI110";
+			roi_supported = <1>;
+			is_ic_rawdata_proc_printf = <0>;
+			download_fw_inrecovery = <1>;
+		};
+	};
+};

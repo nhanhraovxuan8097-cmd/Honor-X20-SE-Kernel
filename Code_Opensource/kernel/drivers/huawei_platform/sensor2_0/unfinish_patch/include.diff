@@ -1,0 +1,16 @@
+diff --git a/frameworks/config/protocol.h b/frameworks/config/protocol.h
+old mode 100644
+new mode 100755
+index 0edb0f2..dbe8eb1
+--- a/frameworks/config/protocol.h
++++ b/frameworks/config/protocol.h
+@@ -424,6 +424,9 @@ typedef enum {
+     // posture
+     SUB_CMD_POSTURE_START_REQ = 0x20,
+ 
++    // ps 
++    SUB_CMD_PS_RCV_STATUS_REQ = 0x20,
++
+     SUB_CMD_MAX = 0xff,
+ 
+ } obj_sub_cmd_t;

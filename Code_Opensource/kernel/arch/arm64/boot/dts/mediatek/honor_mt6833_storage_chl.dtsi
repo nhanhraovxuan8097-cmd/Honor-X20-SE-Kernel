@@ -1,0 +1,9 @@
+&msdc1 {
+        no-mmc;
+        no-sd;
+        status = "disabled";
+};
+
+&ufshci {
+	ufs-no-tw;
+};

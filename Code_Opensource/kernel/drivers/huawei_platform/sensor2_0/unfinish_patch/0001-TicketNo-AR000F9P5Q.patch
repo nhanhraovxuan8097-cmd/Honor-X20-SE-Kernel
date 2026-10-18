@@ -1,0 +1,136 @@
+From 353ab7f000291750cc3cb6b70105f70d35cfbaee Mon Sep 17 00:00:00 2001
+From: z00524316 <z00524316@notesmail.huawei.com>
+Date: Sat, 19 Dec 2020 16:42:21 +0800
+Subject: [PATCH] TicketNo:AR000F9P5Q Description:als vol change to
+
+Team:PDU_DRV
+Feature or Bugfix:Feature
+Binary Source:No
+PrivateCode(Yes/No):No
+
+Change-Id: I2a49c4bb3667a6e9b452051c6ea1194953c7b914
+---
+ drivers/misc/mediatek/sensor/2.0/core/hf_manager.h |  2 ++
+ drivers/misc/mediatek/sensor/2.0/core/sub_cmd.h    | 24 +++++++++++++++++++
+ .../mediatek/sensor/2.0/mtk_nanohub/mtk_nanohub.c  | 27 ++++++++++++++++++++++
+ .../mediatek/sensor/2.0/mtk_nanohub/mtk_nanohub.h  |  1 +
+ 4 files changed, 54 insertions(+)
+ create mode 100644 drivers/misc/mediatek/sensor/2.0/core/sub_cmd.h
+
+diff --git a/drivers/misc/mediatek/sensor/2.0/core/hf_manager.h b/drivers/misc/mediatek/sensor/2.0/core/hf_manager.h
+index f7b30b3..760b838 100644
+--- a/drivers/misc/mediatek/sensor/2.0/core/hf_manager.h
++++ b/drivers/misc/mediatek/sensor/2.0/core/hf_manager.h
+@@ -22,6 +22,7 @@
+ 
+ #include "hf_sensor_type.h"
+ #include "hf_sensor_io.h"
++#include "sub_cmd.h"
+ 
+ #define HF_MANAGER_IO_IN_PROGRESS 0
+ #define HF_MANAGER_IO_READY       1
+@@ -67,6 +68,7 @@ enum custom_action {
+ 	CUST_CMD_CALI = 0,
+ 	CUST_CMD_SET_DATA_TYPE,
+ 	CUST_CMD_GET_DATA,
++	CUST_CMD_CONTROL,
+ 	/*Add custom cmd action here!*/
+ };
+ 
+diff --git a/drivers/misc/mediatek/sensor/2.0/core/sub_cmd.h b/drivers/misc/mediatek/sensor/2.0/core/sub_cmd.h
+new file mode 100644
+index 00000000..d1fbf1d
+--- /dev/null
++++ b/drivers/misc/mediatek/sensor/2.0/core/sub_cmd.h
+@@ -0,0 +1,24 @@
++/*
++ * Copyright (c) Huawei Technologies Co., Ltd. 2020-2020. All rights reserved.
++ * Description: ps channel header file
++ * Author: yaohenglong
++ * Create: 2020-06-16
++ */
++#ifndef __SUB_CMD_H__
++#define __SUB_CMD_H__
++
++typedef enum {
++	/* als */
++	SUB_CMD_SET_ALS_PA = 0x20,
++	SUB_CMD_UPDATE_BL_LEVEL,
++	SUB_CMD_UPDATE_RGB_DATA,
++	SUB_CMD_GET_FACTORY_PARA,
++	SUB_CMD_CHANGE_DC_STATUS,
++	SUB_CMD_CHANGE_ALWAYS_ON_STATUS,
++	SUB_CMD_UPDATE_NOISE_DATA,
++	SUB_CMD_ALS_LCD_FREQ_REQ,
++	SUB_CMD_SET_ALS_UD_CALIB_DATA,
++	SUB_CMD_UPDATE_AOD_STATUS,
++} obj_sub_cmd_t;
++#endif
++
+diff --git a/drivers/misc/mediatek/sensor/2.0/mtk_nanohub/mtk_nanohub.c b/drivers/misc/mediatek/sensor/2.0/mtk_nanohub/mtk_nanohub.c
+index 2802d00..ece8da4 100755
+--- a/drivers/misc/mediatek/sensor/2.0/mtk_nanohub/mtk_nanohub.c
++++ b/drivers/misc/mediatek/sensor/2.0/mtk_nanohub/mtk_nanohub.c
+@@ -407,6 +407,9 @@ static void mtk_nanohub_notify_cmd(union SCP_SENSOR_HUB_DATA *rsp,
+ 		mtk_nanohub_common_cmd),
+ 	MTK_NANOHUB_CMD(SENSOR_HUB_SET_DATA_TYPE,
+ 		mtk_nanohub_common_cmd),
++	MTK_NANOHUB_CMD(SENSOR_HUB_CMD_CONTROL,
++		mtk_nanohub_common_cmd),
++
+ };
+ 
+ const struct mtk_nanohub_cmd *
+@@ -963,6 +966,28 @@ static int mtk_nanohub_get_data_to_hub(int sensor_id,
+ 	return err;
+ }
+ 
++static int mtk_nanohub_cmd_control_to_hub(int sensor_id,
++	struct custom_cmd *cmd)
++{
++	int i;
++	union SCP_SENSOR_HUB_DATA req;
++	int err;
++	/* data offset is 2 */
++	int offset = 2;
++
++	req.req.sensorType = sensor_id;
++	req.req.action = SENSOR_HUB_CMD_CONTROL;
++	for (i = 0; i < cmd->data[1]; i++)
++		req.req.data[i] = cmd->data[offset + i];
++
++	err = mtk_nanohub_req_send(&req);
++	if (err < 0 || sensor_id != req.rsp.sensorType ||
++			req.rsp.action != SENSOR_HUB_CMD_CONTROL) {
++		pr_err("%s fail, err=%d, sensor_id=%d, action=%d\n", __func__, err, req.rsp.sensorType, req.rsp.action);
++		return -1;
++	}
++	return err;
++}
+ 
+ static int mtk_nanohub_send_timestamp_wake_locked(void)
+ {
+@@ -2191,6 +2216,8 @@ static int mtk_nanohub_custom_cmd(struct hf_device *hfdev,
+ 		int need_size = 3;
+ 		/* data will reserved in cust_cmd->data[2 - 4] */
+ 		return mtk_nanohub_get_data_to_hub(type_to_id(sensor_type), (int32_t*)&cust_cmd->data[2], need_size);
++	} else if (cust_action == CUST_CMD_CONTROL) {
++		return mtk_nanohub_cmd_control_to_hub(type_to_id(sensor_type), cust_cmd);
+ 	} else {
+ 		pr_notice("CUSTOM_CMD(%d) need implementation\n", cust_action);
+ 		ret = -1;
+diff --git a/drivers/misc/mediatek/sensor/2.0/mtk_nanohub/mtk_nanohub.h b/drivers/misc/mediatek/sensor/2.0/mtk_nanohub/mtk_nanohub.h
+index bd3f797..d4e04bf 100644
+--- a/drivers/misc/mediatek/sensor/2.0/mtk_nanohub/mtk_nanohub.h
++++ b/drivers/misc/mediatek/sensor/2.0/mtk_nanohub/mtk_nanohub.h
+@@ -72,6 +72,7 @@ struct SensorState {
+ #define SENSOR_HUB_POWER_NOTIFY      9
+ #define SENSOR_HUB_RAW_DATA          10
+ #define SENSOR_HUB_SET_DATA_TYPE     11
++#define SENSOR_HUB_CMD_CONTROL       12
+ 
+ /* SCP_NOTIFY EVENT */
+ #define SCP_INIT_DONE                0
+-- 
+1.9.1
+

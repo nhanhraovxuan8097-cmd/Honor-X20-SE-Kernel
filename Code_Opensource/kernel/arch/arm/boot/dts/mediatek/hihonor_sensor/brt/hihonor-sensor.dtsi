@@ -1,0 +1,61 @@
+&huawei_sensor_info {
+        compatible = "huawei,huawei_sensor_info";
+        product_number = <14>;
+        status = "okay";
+        lsm6dsm_direction = <0>;
+        bmi2xy_direction = <3>;
+        icm4n607_direction = <0>;
+};
+&i2c3 {
+        sar@20 {
+                status = "okay";
+                compatible = "abov,abov_sar";
+                reg = <0x20>;
+                phone_type = <0x1>; /* 1:BRT */
+                sar_int = <&pio 63 0x00>;
+                cap_vdd-supply = <&mt_pmic_vcn18_ldo_reg>;
+                reg_array_len = <0x01>;
+                reg_array_val = <0x09 0x01>;
+                sensor_type = <155>;
+                label = "AbovCapSense";
+        };
+};
+
+&ak8789_hall {
+        compatible = "honor,hall_sensor,ak8789";
+        status = "ok";
+        honor,hall_0{
+                honor,single-n-pole = <&pio 7 0x00>;
+                honor,id = <0>;
+                honor,type = <0x01>;
+                honor,wakeup-flag = <0x4000>; // IRQF_NO_SUSPEND
+                honor,hw-wakeup-support = <0x03>;
+                honor,default-state = "on";
+                honor,x-coordinate = <0>;
+                honor,y-coordinate = <0>;
+                honor,int-delay-time = <100>;
+        };
+        honor,hall_1{
+                honor,single-n-pole = <&pio 11 0x00>;
+                honor,id = <1>;
+                honor,type = <0x01>;
+                honor,wakeup-flag = <0x4000>; // IRQF_NO_SUSPEND
+                honor,hw-wakeup-support = <0x03>;
+                honor,default-state = "on";
+                honor,x-coordinate = <0>;
+                honor,y-coordinate = <0>;
+                honor,int-delay-time = <100>;
+        };
+        honor,hall_2{
+                honor,single-n-pole = <&pio 69 0x00>;
+                honor,id = <2>;
+                honor,type = <0x01>;
+                honor,wakeup-flag = <0x4000>; // IRQF_NO_SUSPEND
+                honor,hw-wakeup-support = <0x03>;
+                honor,default-state = "on";
+                honor,x-coordinate = <0>;
+                honor,y-coordinate = <0>;
+                honor,int-delay-time = <100>;
+        };
+};
+

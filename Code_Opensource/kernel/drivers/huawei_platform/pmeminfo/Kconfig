@@ -1,0 +1,9 @@
+menu "memory info dump"
+
+config MEMINFO_DUMP
+	bool "Memory info dump for TopN"
+	default n
+	help
+	   Dump process info and memory info for TopN
+
+endmenu
