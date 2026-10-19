@@ -46,6 +46,8 @@ jobs:
         sed -i 's/static bool should_continue_reclaim/bool should_continue_reclaim/' mm/vmscan.c
         # 修复 slowpath_count.c 的头文件引用路径
         sed -i 's|#include <slowpath_count.h>|#include "slowpath_count.h"|' mm/slowpath_count.c
+        # 修复 ksm_flock 的 always_inline 报错
+        sed -i 's/inline void ksm_flock/void ksm_flock/' include/linux/keyslot-manager.h
 
     - name: Build Kernel
       run: |
