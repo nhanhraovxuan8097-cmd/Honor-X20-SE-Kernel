@@ -29,13 +29,10 @@ jobs:
     - name: Patch Kernel Source
       run: |
         cd Code_Opensource/kernel
-        
         # 补丁 1：修复 mm/memcg_reclaim.c 中的格式字符串类型不匹配
         sed -i 's/%lu/%llu/g' mm/memcg_reclaim.c
-        
         # 补丁 2：移除 get_area_anon_reclaim_threshold_value 函数的强制内联属性
         sed -i 's/static inline unsigned long get_area_anon_reclaim_threshold_value/static unsigned long get_area_anon_reclaim_threshold_value/' mm/memcg_reclaim.c
-        
         # 补丁 3：在全局 Makefile 中移除 -Werror 标志，防止警告中断编译
         sed -i 's/-Werror//g' Makefile
 
@@ -44,7 +41,13 @@ jobs:
         cd Code_Opensource/kernel
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
+        
         make merge_full_k6833v1_64_defconfig
+        
+        # 【核心修复】在 .config 文件中禁用 STRONG 保护，改用 NONE
+        sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' .config
+        sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' .config
+        
         make -j$(nproc) Image.gz
 
     - name: Package with AnyKernel3
