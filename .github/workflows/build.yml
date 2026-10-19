@@ -8,8 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # 【核心魔法】直接指定在 Ubuntu 20.04 的 Docker 容器里运行，完美解决旧版报错和排队问题！
-    container: ubuntu:20.04 
+    container: ubuntu:20.04
     steps:
     - name: Checkout Source Code
       uses: actions/checkout@v4
@@ -17,7 +16,6 @@ jobs:
     - name: Install Dependencies
       run: |
         apt-get update
-        # 非交互式安装，防止卡在时区选择
         DEBIAN_FRONTEND=noninteractive apt-get install -y git curl bc bison build-essential flex libssl-dev libelf-dev zip unzip python3 cpio wget
 
     - name: Setup Toolchain (GCC 4.9)
@@ -28,21 +26,24 @@ jobs:
 
     - name: Integrate SukiSU
       run: |
-        cd Code_Opensource
-        # 尝试拉取并集成 SukiSU，如果失败不会中断整个编译，方便后续排查
+        # 进入真正的内核源码根目录
+        cd Code_Opensource/kernel
         curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s main || true
 
     - name: Build Kernel
       run: |
-        cd Code_Opensource
-        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- merge_full_k61v1_64_mex_a32_defconfig
+        # 进入真正的内核源码根目录
+        cd Code_Opensource/kernel
+        # 使用找到的正确配置文件
+        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- merge_full_k6833v1_64_defconfig
         make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- -j$(nproc) Image.gz
 
     - name: Package with AnyKernel3
       run: |
         git clone https://github.com/osm0sis/AnyKernel3.git -b master anykernel
         cd anykernel
-        cp ../Code_Opensource/arch/arm64/boot/Image.gz .
+        # 注意这里多了一层 kernel
+        cp ../Code_Opensource/kernel/arch/arm64/boot/Image.gz .
         sed -i 's/device.name1=.*/device.name1=* /' anykernel.sh
         zip -r9 ../Honor-X20-SE-Kernel.zip *
 
