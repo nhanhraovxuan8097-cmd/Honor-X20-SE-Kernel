@@ -42,6 +42,8 @@ jobs:
         # 针对 should_continue_reclaim 的 always_inline 报错
         sed -i 's/extern inline bool should_continue_reclaim/extern bool should_continue_reclaim/' mm/internal.h
         sed -i 's/static inline bool should_continue_reclaim/static bool should_continue_reclaim/' mm/vmscan.c
+        # 修复 should_continue_reclaim 的 static 与 extern 声明冲突
+        sed -i 's/static bool should_continue_reclaim/bool should_continue_reclaim/' mm/vmscan.c
 
     - name: Build Kernel
       run: |
