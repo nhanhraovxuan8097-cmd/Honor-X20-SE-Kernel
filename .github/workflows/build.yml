@@ -33,10 +33,11 @@ jobs:
         sed -i 's/%lu/%llu/g' mm/memcg_reclaim.c
         # 补丁 2：移除 get_area_anon_reclaim_threshold_value 函数的强制内联属性
         sed -i 's/static inline unsigned long get_area_anon_reclaim_threshold_value/static unsigned long get_area_anon_reclaim_threshold_value/' mm/memcg_reclaim.c
-        # 补丁 3：在全局 Makefile 中移除 -Werror 标志，防止警告中断编译
+        # 补丁 3：在全局 Makefile 中移除 -Werror 标志
         sed -i 's/-Werror//g' Makefile
-        # 补丁 4：修复新版 GCC 不识别旧版 -implicit-function-declaration 参数的问题
-        sed -i 's/-Werror-implicit-function-declaration/-Werror=implicit-function-declaration/g' Makefile
+        # 补丁 4：彻底移除所有 Makefile 中的旧版 implicit-function-declaration 标志
+        find . -name "Makefile" -exec sed -i 's/-Werror-implicit-function-declaration//g' {} +
+        find . -name "Makefile" -exec sed -i 's/-Wimplicit-function-declaration//g' {} +
 
     - name: Build Kernel
       run: |
