@@ -44,6 +44,8 @@ jobs:
         sed -i 's/static inline bool should_continue_reclaim/static bool should_continue_reclaim/' mm/vmscan.c
         # 修复 should_continue_reclaim 的 static 与 extern 声明冲突
         sed -i 's/static bool should_continue_reclaim/bool should_continue_reclaim/' mm/vmscan.c
+        # 修复 slowpath_count.c 的头文件引用路径
+        sed -i 's|#include <slowpath_count.h>|#include "slowpath_count.h"|' mm/slowpath_count.c
 
     - name: Build Kernel
       run: |
