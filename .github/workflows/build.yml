@@ -35,9 +35,12 @@ jobs:
         sed -i 's/static inline unsigned long get_area_anon_reclaim_threshold_value/static unsigned long get_area_anon_reclaim_threshold_value/' mm/memcg_reclaim.c
         # 补丁 3：在全局 Makefile 中移除 -Werror 标志
         sed -i 's/-Werror//g' Makefile
-        # 补丁 4：彻底移除所有 Makefile 中的旧版 implicit-function-declaration 标志
-        find . -name "Makefile" -exec sed -i 's/-Werror-implicit-function-declaration//g' {} +
-        find . -name "Makefile" -exec sed -i 's/-Wimplicit-function-declaration//g' {} +
+        
+        # 【终极补丁 4】：暴力清理所有没有 W 的错误参数
+        # 1. 将错误的 -implicit-function-declaration 替换为正确的 -Wimplicit-function-declaration
+        find . -name "Makefile" -exec sed -i 's/-implicit-function-declaration/-Wimplicit-function-declaration/g' {} +
+        # 2. 顺便把老的 -Werror-implicit-function-declaration 也换成新写法
+        find . -name "Makefile" -exec sed -i 's/-Werror-implicit-function-declaration/-Werror=implicit-function-declaration/g' {} +
 
     - name: Build Kernel
       run: |
