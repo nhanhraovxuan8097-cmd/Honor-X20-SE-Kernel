@@ -29,19 +29,24 @@ jobs:
     - name: Patch Kernel Source
       run: |
         cd Code_Opensource/kernel
-        # 补丁 1：修复 mm/memcg_reclaim.c 中的格式字符串类型不匹配
+        # 补丁 1：修复格式字符串类型不匹配
         sed -i 's/%lu/%llu/g' mm/memcg_reclaim.c
-        # 补丁 2：移除 get_area_anon_reclaim_threshold_value 函数的强制内联属性
-        sed -i 's/static inline unsigned long get_area_anon_reclaim_threshold_value/static unsigned long get_area_anon_reclaim_threshold_value/' mm/memcg_reclaim.c
-        # 补丁 3：在全局 Makefile 中移除 -Werror 标志
+        
+        # 补丁 2（终极版）：彻底移除 .h 和 .c 文件中该函数相关的所有 inline 修饰符
+        # 处理 .h 头文件中的声明 (注意是 unsigned long long)
+        sed -i 's/inline unsigned long long get_area_anon_reclaim_threshold_value/unsigned long long get_area_anon_reclaim_threshold_value/g' mm/memcg_policy_internal.h
+        # 处理 .c 文件里的实现 (兼容 long 和 long long 两种情况)
+        sed -i 's/static inline unsigned long long get_area_anon_reclaim_threshold_value/static unsigned long long get_area_anon_reclaim_threshold_value/g' mm/memcg_reclaim.c
+        sed -i 's/static inline unsigned long get_area_anon_reclaim_threshold_value/static unsigned long get_area_anon_reclaim_threshold_value/g' mm/memcg_reclaim.c
+        sed -i 's/inline unsigned long long get_area_anon_reclaim_threshold_value/unsigned long long get_area_anon_reclaim_threshold_value/g' mm/memcg_reclaim.c
+
+        # 补丁 3：移除 -Werror 标志
         sed -i 's/-Werror//g' Makefile
         
-        # 【终极补丁 4】：暴力清理所有没有 W 的错误参数
-        # 1. 将错误的 -implicit-function-declaration 替换为正确的 -Wimplicit-function-declaration
+        # 补丁 4：暴力清理所有没有 W 的 implicit-function-declaration 报错
         find . -name "Makefile" -exec sed -i 's/-implicit-function-declaration/-Wimplicit-function-declaration/g' {} +
-        # 2. 顺便把老的 -Werror-implicit-function-declaration 也换成新写法
         find . -name "Makefile" -exec sed -i 's/-Werror-implicit-function-declaration/-Werror=implicit-function-declaration/g' {} +
-
+        
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
