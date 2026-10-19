@@ -26,28 +26,20 @@ jobs:
         cd Code_Opensource/kernel
         curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s main || true
 
-    - name: Build Kernel
+    - name: Patch Kernel Source
       run: |
         cd Code_Opensource/kernel
-        export ARCH=arm64
-        export CROSS_COMPILE=aarch64-linux-gnu-
-        
-        make merge_full_k6833v1_64_defconfig
-        
-        # 禁用相关配置，避免编译错误和潜在的Root冲突
-        sed -i 's/^CONFIG_HW_ROOT_SCAN=y/# CONFIG_HW_ROOT_SCAN is not set/' .config
-        # 如果还存在相关的华为EIMA配置，也一并禁用
-        sed -i 's/^CONFIG_HUAWEI_EIMA=y/# CONFIG_HUAWEI_EIMA is not set/' .config
+        # 1. 精准修复 %lu 报错
+        sed -i 's/recent refault: %lu/recent refault: %llu/' mm/memcg_reclaim.c
+        # 2. 暴力移除头文件里的 inline 关键字，破解 always_inline 魔咒
+        sed -i 's/inline//g' mm/memcg_policy_internal.h
+        # 3. 彻底清理 -Werror 标志
+        sed -i 's/-Werror//g' Makefile
+        sed -i 's/-Werror//g' scripts/Makefile.extrawarn || true
+        # 4. 清理旧版参数
+        find . -name "Makefile" -exec sed -i 's/-implicit-function-declaration//g' {} +
+        find . -name "Makefile" -exec sed -i 's/-Werror-implicit-function-declaration//g' {} +
 
-        # 保留之前用于禁用 Stack Protector 的修复
-        sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' .config
-        sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' .config
-        
-        # 核心修复：让 GCC 忽略所有未知的警告选项
-        export KCFLAGS="-Wno-error -Wno-unused-command-line-option"
-        
-        make -j$(nproc) Image.gz
-        
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
@@ -56,9 +48,14 @@ jobs:
         
         make merge_full_k6833v1_64_defconfig
         
-        # 【核心修复】在 .config 文件中禁用 STRONG 保护，改用 NONE
+        # 禁用相关配置
+        sed -i 's/^CONFIG_HW_ROOT_SCAN=y/# CONFIG_HW_ROOT_SCAN is not set/' .config
+        sed -i 's/^CONFIG_HUAWEI_EIMA=y/# CONFIG_HUAWEI_EIMA is not set/' .config
         sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' .config
         sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' .config
+        
+        # 忽略编译警告
+        export KCFLAGS="-Wno-error"
         
         make -j$(nproc) Image.gz
 
