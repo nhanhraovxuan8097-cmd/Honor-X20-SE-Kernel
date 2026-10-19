@@ -48,6 +48,8 @@ jobs:
         sed -i 's|#include <slowpath_count.h>|#include "slowpath_count.h"|' mm/slowpath_count.c
         # 修复 ksm_flock 的 always_inline 报错
         sed -i 's/inline void ksm_flock/void ksm_flock/' include/linux/keyslot-manager.h
+        # 修复联发科 clock 驱动找不到 clk-mux.h 的问题
+        sed -i 's|#include <clk-mux.h>|#include "clk-mux.h"|' drivers/clk/mediatek/clkdbg-mt6833.c
 
     - name: Build Kernel
       run: |
