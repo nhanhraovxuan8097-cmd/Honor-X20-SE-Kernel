@@ -39,6 +39,9 @@ jobs:
         # 4. 清理旧版参数
         find . -name "Makefile" -exec sed -i 's/-implicit-function-declaration//g' {} +
         find . -name "Makefile" -exec sed -i 's/-Werror-implicit-function-declaration//g' {} +
+        # 针对 should_continue_reclaim 的 always_inline 报错
+        sed -i 's/extern inline bool should_continue_reclaim/extern bool should_continue_reclaim/' mm/internal.h
+        sed -i 's/static inline bool should_continue_reclaim/static bool should_continue_reclaim/' mm/vmscan.c
 
     - name: Build Kernel
       run: |
