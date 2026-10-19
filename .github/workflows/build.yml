@@ -22,27 +22,26 @@ jobs:
       run: |
         wget -q https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9/archive/refs/heads/lineage-18.1.tar.gz
         tar -zxf lineage-18.1.tar.gz
+        # 关键修复：通过 $GITHUB_PATH 将工具链路径永久加入 PATH
         echo "$GITHUB_WORKSPACE/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9/bin" >> $GITHUB_PATH
 
     - name: Integrate SukiSU
       run: |
-        # 进入真正的内核源码根目录
         cd Code_Opensource/kernel
         curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s main || true
 
     - name: Build Kernel
       run: |
-        # 进入真正的内核源码根目录
         cd Code_Opensource/kernel
-        # 使用找到的正确配置文件
-        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- merge_full_k6833v1_64_defconfig
-        make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- -j$(nproc) Image.gz
+        # 关键修复：将 CROSS_COMPILE 指向工具链的绝对路径
+        CROSS_COMPILE_PATH="$GITHUB_WORKSPACE/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9/bin/aarch64-linux-android-"
+        make ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE_PATH merge_full_k6833v1_64_defconfig
+        make ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE_PATH -j$(nproc) Image.gz
 
     - name: Package with AnyKernel3
       run: |
         git clone https://github.com/osm0sis/AnyKernel3.git -b master anykernel
         cd anykernel
-        # 注意这里多了一层 kernel
         cp ../Code_Opensource/kernel/arch/arm64/boot/Image.gz .
         sed -i 's/device.name1=.*/device.name1=* /' anykernel.sh
         zip -r9 ../Honor-X20-SE-Kernel.zip *
