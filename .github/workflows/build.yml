@@ -13,17 +13,13 @@ jobs:
     - name: Checkout Source Code
       uses: actions/checkout@v4
 
-    - name: Install Dependencies
+    - name: Install Dependencies and Toolchain
       run: |
         apt-get update
-        DEBIAN_FRONTEND=noninteractive apt-get install -y git curl bc bison build-essential flex libssl-dev libelf-dev zip unzip python3 cpio wget
-
-    - name: Setup Toolchain (GCC 4.9)
-      run: |
-        wget -q https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9/archive/refs/heads/lineage-18.1.tar.gz
-        tar -zxf lineage-18.1.tar.gz
-        # 关键修复：通过 $GITHUB_PATH 将工具链路径永久加入 PATH
-        echo "$GITHUB_WORKSPACE/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9/bin" >> $GITHUB_PATH
+        DEBIAN_FRONTEND=noninteractive apt-get install -y \
+          git curl bc bison build-essential flex libssl-dev libelf-dev \
+          zip unzip python3 cpio wget \
+          gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
     - name: Integrate SukiSU
       run: |
@@ -33,10 +29,10 @@ jobs:
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
-        # 关键修复：将 CROSS_COMPILE 指向工具链的绝对路径
-        CROSS_COMPILE_PATH="$GITHUB_WORKSPACE/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9/bin/aarch64-linux-android-"
-        make ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE_PATH merge_full_k6833v1_64_defconfig
-        make ARCH=arm64 CROSS_COMPILE=$CROSS_COMPILE_PATH -j$(nproc) Image.gz
+        export ARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+        make merge_full_k6833v1_64_defconfig
+        make -j$(nproc) Image.gz
 
     - name: Package with AnyKernel3
       run: |
