@@ -32,14 +32,11 @@ jobs:
         # 补丁 1：修复格式字符串类型不匹配
         sed -i 's/%lu/%llu/g' mm/memcg_reclaim.c
         
-        # 补丁 2（终极版）：彻底移除 .h 和 .c 文件中该函数相关的所有 inline 修饰符
-        # 处理 .h 头文件中的声明 (注意是 unsigned long long)
-        sed -i 's/inline unsigned long long get_area_anon_reclaim_threshold_value/unsigned long long get_area_anon_reclaim_threshold_value/g' mm/memcg_policy_internal.h
-        # 处理 .c 文件里的实现 (兼容 long 和 long long 两种情况)
-        sed -i 's/static inline unsigned long long get_area_anon_reclaim_threshold_value/static unsigned long long get_area_anon_reclaim_threshold_value/g' mm/memcg_reclaim.c
-        sed -i 's/static inline unsigned long get_area_anon_reclaim_threshold_value/static unsigned long get_area_anon_reclaim_threshold_value/g' mm/memcg_reclaim.c
-        sed -i 's/inline unsigned long long get_area_anon_reclaim_threshold_value/unsigned long long get_area_anon_reclaim_threshold_value/g' mm/memcg_reclaim.c
-
+        # 补丁 2（精准狙杀版）：只要包含 get_area_anon_reclaim_threshold_value 的行，统统删掉 inline 关键字
+        # 这样不管它是 "inline" 还是 "static inline"，空格多少个，统统失效
+        sed -i '/get_area_anon_reclaim_threshold_value/ s/inline //g' mm/memcg_policy_internal.h
+        sed -i '/get_area_anon_reclaim_threshold_value/ s/inline //g' mm/memcg_reclaim.c
+        
         # 补丁 3：移除 -Werror 标志
         sed -i 's/-Werror//g' Makefile
         
