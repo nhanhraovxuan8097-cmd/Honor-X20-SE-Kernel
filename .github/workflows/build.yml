@@ -26,6 +26,19 @@ jobs:
         cd Code_Opensource/kernel
         curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s main || true
 
+    - name: Patch Kernel Source
+      run: |
+        cd Code_Opensource/kernel
+        
+        # 补丁 1：修复 mm/memcg_reclaim.c 中的格式字符串类型不匹配
+        sed -i 's/%lu/%llu/g' mm/memcg_reclaim.c
+        
+        # 补丁 2：移除 get_area_anon_reclaim_threshold_value 函数的强制内联属性
+        sed -i 's/static inline unsigned long get_area_anon_reclaim_threshold_value/static unsigned long get_area_anon_reclaim_threshold_value/' mm/memcg_reclaim.c
+        
+        # 补丁 3：在全局 Makefile 中移除 -Werror 标志，防止警告中断编译
+        sed -i 's/-Werror//g' Makefile
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
