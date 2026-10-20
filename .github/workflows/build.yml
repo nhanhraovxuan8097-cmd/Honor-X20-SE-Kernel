@@ -87,6 +87,8 @@ jobs:
         sed -i '/huawei_ts_kit.h/d' drivers/devkit/tpkit/3_0/huawei_ts_kit_fsnode.c || true
         # 22. 终极防线：把 tpkit/3_0 目录加入头文件搜索路径，一劳永逸解决所有尖括号问题
         echo 'ccflags-y += -I$(srctree)/drivers/devkit/tpkit/3_0/' >> drivers/devkit/tpkit/3_0/Makefile || true
+        # 24. 强行补全由于缺头文件导致丢失的两个宏定义
+        find . -name "huawei_ts_kit_fsnode.c" -exec sed -i '1i #define TS_WORK_IN_SLEEP 0\n#define SUSPEND_NEED_CAP_TEST 0' {} + || true
 
     - name: Build Kernel
       run: |
