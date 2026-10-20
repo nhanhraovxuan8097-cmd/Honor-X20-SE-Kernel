@@ -83,6 +83,8 @@ jobs:
         # 20. 彻底干掉找不到的 bias_bl_utils.h
         find . -name "*.h" -exec sed -i 's|.*#include.*bias_bl_utils.h.*|// &|g' {} + || true
         find . -name "*.c" -exec sed -i 's|.*#include.*bias_bl_utils.h.*|// &|g' {} + || true
+        # 21. 彻底绝杀：直接精准定位这个文件，删掉包含 huawei_ts_kit.h 的那一行
+        sed -i 's|#include <huawei_ts_kit.h>|// #include <huawei_ts_kit.h>|g' drivers/devkit/tpkit/3_0/huawei_ts_kit_fsnod.c || true
 
     - name: Build Kernel
       run: |
