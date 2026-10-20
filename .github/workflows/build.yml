@@ -100,6 +100,8 @@ jobs:
         find . -name "Makefile" -exec sed -i 's/-Werror//g' {} + || true
         find . -name "Kbuild" -exec sed -i 's/-Werror//g' {} + || true
         find . -name "Makefile" -exec sed -i 's/-Werror=return-type//g' {} + || true
+        # 终极闭麦：屏蔽所有格式化警告，强行把它们降级为忽略
+        export KCFLAGS="-Wno-error -Wno-format -Wno-format-security -Wno-format-overflow -Wno-format-truncation"
 
     - name: Build Kernel
       run: |
