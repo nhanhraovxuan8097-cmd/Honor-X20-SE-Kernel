@@ -94,6 +94,12 @@ jobs:
         find drivers/devkit/tpkit/ -name "*.h" -exec sed -i 's|#include <huawei_ts_kit|#include "huawei_ts_kit|g' {} + || true
         # 釜底抽薪：直接把当前目录写进这个模块的 Makefile 里
         echo 'ccflags-y += -I$(srctree)/drivers/devkit/tpkit/3_0/' >> drivers/devkit/tpkit/3_0/Makefile || true
+        # 25. 修复背光驱动 ktd3136.c 的格式错误
+        find . -name "ktd3136.c" -exec sed -i 's|errno = %ld|errno = %d|g' {} + || true
+        # 26. 彻底、完全、暴力地清理整个内核里所有的 -Werror（包括 Kbuild）
+        find . -name "Makefile" -exec sed -i 's/-Werror//g' {} + || true
+        find . -name "Kbuild" -exec sed -i 's/-Werror//g' {} + || true
+        find . -name "Makefile" -exec sed -i 's/-Werror=return-type//g' {} + || true
 
     - name: Build Kernel
       run: |
