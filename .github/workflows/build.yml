@@ -65,6 +65,9 @@ jobs:
         find . -name "*.c" -exec sed -i 's|#include "lcd_kit_adapt.h"|// #include "lcd_kit_adapt.h"|g' {} + || true
         # 13. 终极防套娃：彻底注释掉 lcd_kit_utils.h 里所有引用 linux/hisi/ 的头文件
         find . -name "lcd_kit_utils.h" -exec sed -i 's|#include <linux/hisi/|// #include <linux/hisi/|g' {} + || true
+        # 14. 终极欺骗：在 lcd_kit_utils.h 里补上缺失的假定义
+        find . -name "lcd_kit_utils.h" -exec sed -i '1i #define LCD_PANEL_VERSION_SIZE 16' {} + || true
+        find . -name "lcd_kit_utils.h" -exec sed -i '1i typedef int demura_set_info_t;' {} + || true
 
     - name: Build Kernel
       run: |
