@@ -51,6 +51,11 @@ jobs:
         find . -name "Kbuild" -exec sed -i 's/-Werror//g' {} + || true
         # 7. 终极修复：全盘搜索并替换所有引用 helio-dvfsrc-qos.h 的尖括号
         find . -type f -name "*.c" -exec sed -i 's|#include <helio-dvfsrc-qos.h>|#include "helio-dvfsrc-qos.h"|g' {} + || true
+        # 8. 修复 helio-dvfsrc 系列头文件问题（全盘把尖括号改成双引号）
+        find . -name "*.c" -exec sed -i 's|#include <helio-dvfsrc-mt6833.h>|#include "helio-dvfsrc-mt6833.h"|g' {} + || true
+        # 9. 修复找不到 hisi_fb.h 的问题（直接全盘注释掉）
+        find . -name "*.h" -exec sed -i 's|#include "hisi_fb.h"|// #include "hisi_fb.h"|g' {} + || true
+        find . -name "*.c" -exec sed -i 's|#include "hisi_fb.h"|// #include "hisi_fb.h"|g' {} + || true
 
     - name: Build Kernel
       run: |
