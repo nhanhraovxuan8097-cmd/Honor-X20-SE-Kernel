@@ -58,6 +58,8 @@ jobs:
         find . -name "*.c" -exec sed -i 's|#include "hisi_fb.h"|// #include "hisi_fb.h"|g' {} + || true
         # 10. 终极修复：把 .c 和 .h 文件里所有带尖括号的 helio-dvfsrc-qos.h 全部干掉
         find . -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i 's|#include <helio-dvfsrc-qos.h>|#include "helio-dvfsrc-qos.h"|g' {} + || true
+        # 11. 釜底抽薪：强行把当前目录加入该模块的头文件搜索路径
+        echo 'ccflags-y += -I$(srctree)/drivers/devfreq/helio-dvfsrc-v3/' >> drivers/devfreq/helio-dvfsrc-v3/Makefile || true
 
     - name: Build Kernel
       run: |
