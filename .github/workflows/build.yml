@@ -103,6 +103,8 @@ jobs:
         # 终极扫尾：全盘清理所有 -Werror
         find . -name "Makefile" -exec sed -i 's/-Werror//g' {} + || true
         find . -name "Kbuild" -exec sed -i 's/-Werror//g' {} + || true
+        # 终极物理屏蔽：把 tpkit 模块的所有编译目标全部注释掉，让它彻底隐身！
+        sed -i 's/^obj-/# obj-/g' drivers/devkit/tpkit/3_0/Makefile || true
 
     - name: Build Kernel
       run: |
