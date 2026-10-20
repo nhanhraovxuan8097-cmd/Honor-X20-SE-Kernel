@@ -16,10 +16,7 @@ jobs:
     - name: Install Dependencies and Toolchain
       run: |
         apt-get update
-        DEBIAN_FRONTEND=noninteractive apt-get install -y \
-          git curl bc bison build-essential flex libssl-dev libelf-dev \
-          zip unzip python3 cpio wget \
-          gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+        DEBIAN_FRONTEND=noninteractive apt-get install -y git curl bc bison build-essential flex libssl-dev libelf-dev zip unzip python3 cpio wget gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
     - name: Integrate SukiSU
       run: |
@@ -29,53 +26,33 @@ jobs:
     - name: Patch Kernel Source
       run: |
         cd Code_Opensource/kernel
-        # 1. 精准修复 %lu 报错
-        sed -i 's/recent refault: %lu/recent refault: %llu/' mm/memcg_reclaim.c
-        # 2. 暴力移除头文件里的 inline 关键字，破解 always_inline 魔咒
-        sed -i 's/inline//g' mm/memcg_policy_internal.h
-        # 3. 彻底清理 -Werror 标志
-        sed -i 's/-Werror//g' Makefile
+        sed -i 's/recent refault: %lu/recent refault: %llu/' mm/memcg_reclaim.c || true
+        sed -i 's/inline//g' mm/memcg_policy_internal.h || true
+        sed -i 's/extern inline bool should_continue_reclaim/extern bool should_continue_reclaim/' mm/internal.h || true
+        sed -i 's/static inline bool should_continue_reclaim/bool should_continue_reclaim/' mm/vmscan.c || true
+        sed -i 's/inline void ksm_flock/void ksm_flock/' include/linux/keyslot-manager.h || true
+        sed -i 's|#include <slowpath_count.h>|#include "slowpath_count.h"|' mm/slowpath_count.c || true
+        sed -i 's|#include <clk-mux.h>|#include "clk-mux.h"|' drivers/clk/mediatek/clkdbg-mt6833.c || true
+        sed -i 's|#include <dt_idle_states.h>|#include "dt_idle_states.h"|' drivers/cpuidle/cpuidle-mediatek.c || true
+        sed -i 's/-Werror//g' Makefile || true
         sed -i 's/-Werror//g' scripts/Makefile.extrawarn || true
-        # 4. 清理旧版参数
-        find . -name "Makefile" -exec sed -i 's/-implicit-function-declaration//g' {} +
-        find . -name "Makefile" -exec sed -i 's/-Werror-implicit-function-declaration//g' {} +
-        # 针对 should_continue_reclaim 的 always_inline 报错
-        sed -i 's/extern inline bool should_continue_reclaim/extern bool should_continue_reclaim/' mm/internal.h
-        sed -i 's/static inline bool should_continue_reclaim/static bool should_continue_reclaim/' mm/vmscan.c
-        # 修复 should_continue_reclaim 的 static 与 extern 声明冲突
-        sed -i 's/static bool should_continue_reclaim/bool should_continue_reclaim/' mm/vmscan.c
-        # 修复 slowpath_count.c 的头文件引用路径
-        sed -i 's|#include <slowpath_count.h>|#include "slowpath_count.h"|' mm/slowpath_count.c
-        # 修复 ksm_flock 的 always_inline 报错
-        sed -i 's/inline void ksm_flock/void ksm_flock/' include/linux/keyslot-manager.h
-        # 修复联发科 clock 驱动找不到 clk-mux.h 的问题
-        sed -i 's|#include <clk-mux.h>|#include "clk-mux.h"|' drivers/clk/mediatek/clkdbg-mt6833.c
-        # 修复联发科 cpuidle 找不到 dt_idle_states.h 的问题
-        sed -i 's|#include <dt_idle_states.h>|#include "dt_idle_states.h"|' drivers/cpuidle/cpuidle-mediatek.c
-        # 1. 修复 huawei_ts_kit.h 找不到的问题
-        sed -i 's|#include <huawei_ts_kit.h>|#include "huawei_ts_kit.h"|' drivers/devkit/tpkit/3_0/huawei_ts_kit_fsnod.c
-        # 2. 修复 lcd_kit_adapt.h 找不到的问题（直接注释掉该行）
-        sed -i 's|#include "lcd_kit_adapt.h"|// #include "lcd_kit_adapt.h"|' drivers/devkit/lcdkit/lcdkit3.0/kernel/mtk/adapt/lcd_kit_adapt.c
-        # 3. 修复 lcd_kit_is_power_event 未声明的问题
-        sed -i '1i #include "lcd_kit_utils.h"' drivers/devkit/lcdkit/lcdkit3.0/kernel/common/src/lcd_kit_common.c
+        find . -name "Makefile" -exec sed -i 's/-implicit-function-declaration//g' {} + || true
+        find . -name "Makefile" -exec sed -i 's/-Werror-implicit-function-declaration//g' {} + || true
+        find . -name "huawei_ts_kit_fsnod.c" -exec sed -i 's|#include <huawei_ts_kit.h>|#include "huawei_ts_kit.h"|' {} + || true
+        find . -name "lcd_kit_adapt.c" -exec sed -i 's|#include "lcd_kit_adapt.h"|// #include "lcd_kit_adapt.h"|' {} + || true
+        find . -name "lcd_kit_common.c" -exec sed -i '1i #include "lcd_kit_utils.h"' {} + || true
 
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
-        
         make merge_full_k6833v1_64_defconfig
-        
-        # 禁用相关配置
-        sed -i 's/^CONFIG_HW_ROOT_SCAN=y/# CONFIG_HW_ROOT_SCAN is not set/' .config
-        sed -i 's/^CONFIG_HUAWEI_EIMA=y/# CONFIG_HUAWEI_EIMA is not set/' .config
-        sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' .config
-        sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' .config
-        
-        # 忽略编译警告
+        sed -i 's/^CONFIG_HW_ROOT_SCAN=y/# CONFIG_HW_ROOT_SCAN is not set/' .config || true
+        sed -i 's/^CONFIG_HUAWEI_EIMA=y/# CONFIG_HUAWEI_EIMA is not set/' .config || true
+        sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' .config || true
+        sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' .config || true
         export KCFLAGS="-Wno-error"
-        
         make -j$(nproc) Image.gz
 
     - name: Package with AnyKernel3
