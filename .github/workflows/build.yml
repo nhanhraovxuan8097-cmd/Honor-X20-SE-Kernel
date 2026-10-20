@@ -77,6 +77,12 @@ jobs:
         find . -name "huawei_ts_kit_fsnod.c" -exec sed -i 's|#include.*huawei_ts_kit.h.*|// &|' {} + || true
         # 18. 解决 case 值重复的冲突（把 DSC 的 case 注释掉）
         find . -name "lcd_kit_adapt.c" -exec sed -i 's|case DTYPE_DSC_LWRITE:|// case DTYPE_DSC_LWRITE:|g' {} + || true
+        # 19. 彻底干掉 huawei_ts_kit.h
+        find . -name "huawei_ts_kit_fsnod.c" -exec sed -i 's|.*#include.*huawei_ts_kit.h.*|// &|g' {} + || true
+        find . -name "*.h" -exec sed -i 's|.*#include.*huawei_ts_kit.h.*|// &|g' {} + || true
+        # 20. 彻底干掉找不到的 bias_bl_utils.h
+        find . -name "*.h" -exec sed -i 's|.*#include.*bias_bl_utils.h.*|// &|g' {} + || true
+        find . -name "*.c" -exec sed -i 's|.*#include.*bias_bl_utils.h.*|// &|g' {} + || true
 
     - name: Build Kernel
       run: |
