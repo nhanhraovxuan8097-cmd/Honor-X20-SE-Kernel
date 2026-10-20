@@ -71,6 +71,10 @@ jobs:
         # 15. 修复 size_t 格式警告，并在该模块强制关闭 format 警告
         find . -name "lcd_kit_adapt.c" -exec sed -i 's|"cmd len is %d\\n"|"cmd len is %zu\\n"|g' {} + || true
         echo 'ccflags-y += -Wno-format' >> drivers/devkit/lcdkit/lcdkit3.0/kernel/mtk/adapt/Makefile || true
+        # 16. 给 lcd_kit_adapt.c 强行注入缺失的假宏定义
+        find . -name "lcd_kit_adapt.c" -exec sed -i '1i #define DTYPE_DSC_LWRITE 0x39\n#define MTK_READ_MAX_LEN 256' {} + || true
+        # 17. 彻底注释掉 huawei_ts_kit_fsnod.c 中找不到的头文件
+        find . -name "huawei_ts_kit_fsnod.c" -exec sed -i 's|#include.*huawei_ts_kit.h.*|// &|' {} + || true
 
     - name: Build Kernel
       run: |
