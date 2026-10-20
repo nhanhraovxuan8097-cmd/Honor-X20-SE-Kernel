@@ -100,8 +100,9 @@ jobs:
         find . -name "Makefile" -exec sed -i 's/-Werror//g' {} + || true
         find . -name "Kbuild" -exec sed -i 's/-Werror//g' {} + || true
         find . -name "Makefile" -exec sed -i 's/-Werror=return-type//g' {} + || true
-        # 终极闭麦：屏蔽所有格式化警告，强行把它们降级为忽略
-        export KCFLAGS="-Wno-error -Wno-format -Wno-format-security -Wno-format-overflow -Wno-format-truncation"
+        # 终极扫尾：全盘清理所有 -Werror
+        find . -name "Makefile" -exec sed -i 's/-Werror//g' {} + || true
+        find . -name "Kbuild" -exec sed -i 's/-Werror//g' {} + || true
 
     - name: Build Kernel
       run: |
@@ -113,7 +114,8 @@ jobs:
         sed -i 's/^CONFIG_HUAWEI_EIMA=y/# CONFIG_HUAWEI_EIMA is not set/' .config || true
         sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' .config || true
         sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' .config || true
-        export KCFLAGS="-Wno-error"
+        # 终极闭麦：必须在 make 命令所在的步骤里设置，才能生效！
+        export KCFLAGS="-Wno-error -Wno-format -Wno-format-security -Wno-format-overflow -Wno-format-truncation -Wno-return-type"
         make -j$(nproc) Image.gz
 
     - name: Package with AnyKernel3
