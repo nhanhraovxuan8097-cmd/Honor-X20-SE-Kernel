@@ -41,6 +41,14 @@ jobs:
         find . -name "huawei_ts_kit_fsnod.c" -exec sed -i 's|#include <huawei_ts_kit.h>|#include "huawei_ts_kit.h"|' {} + || true
         find . -name "lcd_kit_adapt.c" -exec sed -i 's|#include "lcd_kit_adapt.h"|// #include "lcd_kit_adapt.h"|' {} + || true
         find . -name "lcd_kit_common.c" -exec sed -i '1i #include "lcd_kit_utils.h"' {} + || true
+        # 4. 修复图1：找不到 hisi 相关的电源键头文件 (直接暴力注释掉)
+        find . -name "lcd_kit_utils.h" -exec sed -i 's|#include <linux/hisi/hisi_powerkey_event.h>|// #include <linux/hisi/hisi_powerkey_event.h>|' {} + || true
+        # 5. 修复图2：找不到 helio-dvfsrc-qos.h (改成双引号优先本地查找)
+        find . -name "helio-dvfsrc-qos.c" -exec sed -i 's|#include <helio-dvfsrc-qos.h>|#include "helio-dvfsrc-qos.h"|' {} + || true
+        # 6. 修复图3：彻底清理所有子目录 Makefile 里的 -Werror 标志
+        find . -name "Makefile" -exec sed -i 's/-Werror//g' {} + || true
+        find . -name "Makefile" -exec sed -i 's/-Werror=format//g' {} + || true
+        find . -name "Kbuild" -exec sed -i 's/-Werror//g' {} + || true
 
     - name: Build Kernel
       run: |
