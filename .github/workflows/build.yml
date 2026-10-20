@@ -68,6 +68,9 @@ jobs:
         # 14. 终极欺骗：在 lcd_kit_utils.h 里补上缺失的假定义
         find . -name "lcd_kit_utils.h" -exec sed -i '1i #define LCD_PANEL_VERSION_SIZE 16' {} + || true
         find . -name "lcd_kit_utils.h" -exec sed -i '1i typedef int demura_set_info_t;' {} + || true
+        # 15. 修复 size_t 格式警告，并在该模块强制关闭 format 警告
+        find . -name "lcd_kit_adapt.c" -exec sed -i 's|"cmd len is %d\\n"|"cmd len is %zu\\n"|g' {} + || true
+        echo 'ccflags-y += -Wno-format' >> drivers/devkit/lcdkit/lcdkit3.0/kernel/mtk/adapt/Makefile || true
 
     - name: Build Kernel
       run: |
