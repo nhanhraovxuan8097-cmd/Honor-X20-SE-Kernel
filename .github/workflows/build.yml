@@ -50,6 +50,8 @@ jobs:
         sed -i 's/inline void ksm_flock/void ksm_flock/' include/linux/keyslot-manager.h
         # 修复联发科 clock 驱动找不到 clk-mux.h 的问题
         sed -i 's|#include <clk-mux.h>|#include "clk-mux.h"|' drivers/clk/mediatek/clkdbg-mt6833.c
+        # 修复联发科 cpuidle 找不到 dt_idle_states.h 的问题
+        sed -i 's|#include <dt_idle_states.h>|#include "dt_idle_states.h"|' drivers/cpuidle/cpuidle-mediatek.c
 
     - name: Build Kernel
       run: |
