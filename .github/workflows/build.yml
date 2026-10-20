@@ -52,6 +52,12 @@ jobs:
         sed -i 's|#include <clk-mux.h>|#include "clk-mux.h"|' drivers/clk/mediatek/clkdbg-mt6833.c
         # 修复联发科 cpuidle 找不到 dt_idle_states.h 的问题
         sed -i 's|#include <dt_idle_states.h>|#include "dt_idle_states.h"|' drivers/cpuidle/cpuidle-mediatek.c
+        # 1. 修复 huawei_ts_kit.h 找不到的问题
+        sed -i 's|#include <huawei_ts_kit.h>|#include "huawei_ts_kit.h"|' drivers/devkit/tpkit/3_0/huawei_ts_kit_fsnod.c
+        # 2. 修复 lcd_kit_adapt.h 找不到的问题（直接注释掉该行）
+        sed -i 's|#include "lcd_kit_adapt.h"|// #include "lcd_kit_adapt.h"|' drivers/devkit/lcdkit/lcdkit3.0/kernel/mtk/adapt/lcd_kit_adapt.c
+        # 3. 修复 lcd_kit_is_power_event 未声明的问题
+        sed -i '1i #include "lcd_kit_utils.h"' drivers/devkit/lcdkit/lcdkit3.0/kernel/common/src/lcd_kit_common.c
 
     - name: Build Kernel
       run: |
