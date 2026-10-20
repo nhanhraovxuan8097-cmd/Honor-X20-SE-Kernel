@@ -89,6 +89,11 @@ jobs:
         echo 'ccflags-y += -I$(srctree)/drivers/devkit/tpkit/3_0/' >> drivers/devkit/tpkit/3_0/Makefile || true
         # 24. 强行补全由于缺头文件导致丢失的两个宏定义
         find . -name "huawei_ts_kit_fsnode.c" -exec sed -i '1i #define TS_WORK_IN_SLEEP 0\n#define SUSPEND_NEED_CAP_TEST 0' {} + || true
+        # 终极修复：把 tpkit 目录下所有的 <huawei_ts_kit 尖括号改成双引号
+        find drivers/devkit/tpkit/ -name "*.c" -exec sed -i 's|#include <huawei_ts_kit|#include "huawei_ts_kit|g' {} + || true
+        find drivers/devkit/tpkit/ -name "*.h" -exec sed -i 's|#include <huawei_ts_kit|#include "huawei_ts_kit|g' {} + || true
+        # 釜底抽薪：直接把当前目录写进这个模块的 Makefile 里
+        echo 'ccflags-y += -I$(srctree)/drivers/devkit/tpkit/3_0/' >> drivers/devkit/tpkit/3_0/Makefile || true
 
     - name: Build Kernel
       run: |
