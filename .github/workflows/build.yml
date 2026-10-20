@@ -49,6 +49,8 @@ jobs:
         find . -name "Makefile" -exec sed -i 's/-Werror//g' {} + || true
         find . -name "Makefile" -exec sed -i 's/-Werror=format//g' {} + || true
         find . -name "Kbuild" -exec sed -i 's/-Werror//g' {} + || true
+        # 7. 终极修复：全盘搜索并替换所有引用 helio-dvfsrc-qos.h 的尖括号
+        find . -type f -name "*.c" -exec sed -i 's|#include <helio-dvfsrc-qos.h>|#include "helio-dvfsrc-qos.h"|g' {} + || true
 
     - name: Build Kernel
       run: |
