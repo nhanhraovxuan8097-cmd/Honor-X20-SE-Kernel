@@ -60,6 +60,9 @@ jobs:
         find . -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i 's|#include <helio-dvfsrc-qos.h>|#include "helio-dvfsrc-qos.h"|g' {} + || true
         # 11. 釜底抽薪：强行把当前目录加入该模块的头文件搜索路径
         echo 'ccflags-y += -I$(srctree)/drivers/devfreq/helio-dvfsrc-v3/' >> drivers/devfreq/helio-dvfsrc-v3/Makefile || true
+        # 12. 修复 lcd_kit_utils.h 中找不到 lcd_kit_adapt.h 的问题（直接全盘注释掉）
+        find . -name "*.h" -exec sed -i 's|#include "lcd_kit_adapt.h"|// #include "lcd_kit_adapt.h"|g' {} + || true
+        find . -name "*.c" -exec sed -i 's|#include "lcd_kit_adapt.h"|// #include "lcd_kit_adapt.h"|g' {} + || true
 
     - name: Build Kernel
       run: |
