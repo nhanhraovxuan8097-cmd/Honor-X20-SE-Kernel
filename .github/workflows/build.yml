@@ -85,6 +85,8 @@ jobs:
         find . -name "*.c" -exec sed -i 's|.*#include.*bias_bl_utils.h.*|// &|g' {} + || true
         # 21. 终极绝杀：直接把这个文件里带有 huawei_ts_kit.h 的那一行连根拔起！
         sed -i '/huawei_ts_kit.h/d' drivers/devkit/tpkit/3_0/huawei_ts_kit_fsnode.c || true
+        # 22. 终极防线：把 tpkit/3_0 目录加入头文件搜索路径，一劳永逸解决所有尖括号问题
+        echo 'ccflags-y += -I$(srctree)/drivers/devkit/tpkit/3_0/' >> drivers/devkit/tpkit/3_0/Makefile || true
 
     - name: Build Kernel
       run: |
