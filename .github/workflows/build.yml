@@ -107,6 +107,9 @@ jobs:
         # 同时给 Makefile 加上老式参数兜底
         echo 'EXTRA_CFLAGS += -I$(srctree)/drivers/misc/mediatek/include/mt-plat/mt6853/include/mach/' >> drivers/iommu/Makefile || true
 
+        # 36. 修复新版 GCC 对 blk_crypto_flock 强制内联的报错
+        sed -i 's/inline void blk_crypto_flock/void blk_crypto_flock/' include/linux/blk-crypto.h || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
