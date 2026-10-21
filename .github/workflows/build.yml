@@ -126,6 +126,11 @@ jobs:
         echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/ppm_v3/src/mach/mt6853/' >> drivers/misc/mediatek/base/power/ppm_v3/src/mach/mt6853/Makefile || true
         echo 'EXTRA_CFLAGS += -I$(srctree)/drivers/misc/mediatek/base/power/ppm_v3/src/mach/mt6853/' >> drivers/misc/mediatek/base/power/ppm_v3/src/mach/mt6853/Makefile || true
 
+        # 39. 物理搬运：解决 SWPM 电源管理头文件找不到的问题
+        find . -name "mtk_swpm_platform.h" -exec cp {} drivers/misc/mediatek/base/power/include/swpm_v1/ \; || true
+        find . -name "mtk_swpm_platform.h" -exec cp {} drivers/misc/mediatek/base/power/swpm_v1/mt6833/ \; || true
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/include/swpm_v1/' >> drivers/misc/mediatek/base/power/swpm_v1/Makefile || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
