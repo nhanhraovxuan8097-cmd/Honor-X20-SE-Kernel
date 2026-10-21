@@ -151,6 +151,29 @@ jobs:
         # 41. 注释掉多余的 case VIO18_DRAM，解决重复冲突
         sed -i '1214s/case VIO18_DRAM:/\/\/ case VIO18_DRAM:/' drivers/misc/mediatek/base/power/swpm_v1/mt6833/mtk_swpm_platform.c || true
 
+        # 42. 终极连环清道夫：一次性解决图1-图4的所有头文件与宏报错
+        # 图1：VIO18_DRAM 不存在，编译器提示用 VDD18_DRAM，直接全局替换
+        find . -name "mtk_swpm_platform.c" -exec sed -i 's/VIO18_DRAM/VDD18_DRAM/g' {} + || true
+
+        # 图2：强制把恶心的相对路径 ../../../common/isp_common.h 替换为双引号本地查找
+        find . -name "camera_isp.c" -exec sed -i 's|#include "../../../common/isp_common.h"|#include "isp_common.h"|g' {} + || true
+        find . -name "isp_common.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+        
+        # 图2：强制把 pinctrl 里的 ../../../gpio/gpiolib.h 替换并复制
+        find . -name "pinctrl-mtk-common-v2_debug.c" -exec sed -i 's|#include "../../../gpio/gpiolib.h"|#include "gpiolib.h"|g' {} + || true
+        find . -name "gpiolib.h" -exec cp {} drivers/pinctrl/mediatek/ \; || true
+
+        # 图3 & 图4：电池和充电模块找不到头文件，强行全盘搬运并注入路径
+        find . -name "mtk_gauge_class.h" -exec cp {} drivers/power/supply/mediatek/battery/ \; || true
+        find . -name "mtk_gauge_class.h" -exec cp {} drivers/power/supply/mediatek/charger/ \; || true
+        find . -name "mtk_charger_intf.h" -exec cp {} drivers/power/supply/mediatek/charger/ \; || true
+        find . -name "mtk_charger_intf.h" -exec cp {} drivers/power/supply/mediatek/ \; || true
+
+        # 给电池和充电模块加上终极 include 路径兜底
+        echo 'ccflags-y += -I$(srctree)/drivers/power/supply/mediatek/battery/ -I$(srctree)/drivers/power/supply/mediatek/charger/' >> drivers/power/supply/mediatek/Makefile || true
+        echo 'ccflags-y += -I$(srctree)/drivers/power/supply/mediatek/battery/' >> drivers/power/supply/mediatek/battery/Makefile || true
+        echo 'ccflags-y += -I$(srctree)/drivers/power/supply/mediatek/charger/' >> drivers/power/supply/mediatek/charger/Makefile || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
