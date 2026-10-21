@@ -95,6 +95,9 @@ jobs:
         # 33. 修复联发科 DRM 驱动找不到 mtk_drm_drv.h 的问题
         find drivers/gpu/drm/mediatek/ -name "*.c" -exec sed -i 's|#include <mtk_drm_drv.h>|#include "mtk_drm_drv.h"|g' {} + || true
 
+        # 34. 修复 IOMMU 驱动找不到 mtk_iommu_ext.h 的问题（强行注入联发科平台的 include 路径）
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/mt-plat/mt6853/include/mach/ -I$(srctree)/drivers/misc/mediatek/include/mt-plat/mt6853/include/ -I$(srctree)/drivers/misc/mediatek/include/mt-plat/' >> drivers/iommu/Makefile || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
