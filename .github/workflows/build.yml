@@ -77,6 +77,10 @@ jobs:
         echo "" > drivers/devkit/tpkit/3_0/Makefile || true
         touch drivers/devkit/tpkit/3_0/built-in.o || true
 
+        # 修复华为传感器驱动找不到 motion.h 的问题
+        find . -name "motion_channel.c" -exec sed -i 's|#include <motion.h>|#include "motion.h"|g' {} + || true
+        echo 'ccflags-y += -I$(srctree)/drivers/huawei_platform/sensor2_0/' >> drivers/huawei_platform/sensor2_0/Makefile || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
