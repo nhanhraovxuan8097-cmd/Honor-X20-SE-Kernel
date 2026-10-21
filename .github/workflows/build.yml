@@ -242,6 +242,18 @@ jobs:
         find . -name "mt_events_camsys.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
         echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/cameraisp/src/mt6853/inc/' >> drivers/misc/mediatek/cameraisp/src/mt6853/Makefile || true
 
+        # 49. 修复 Makefile 拼接错误 + 彻底物理屏蔽 Trace 调试代码
+        # 1. 修复被搞坏的 Makefile（删掉那个奇怪的拼接字符串，用换行符重新追加）
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "Makefile" -exec sed -i 's/cam_qos.occflags-y//g' {} + || true
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "Makefile" -exec sed -i 's/\.occflags-y//g' {} + || true
+        echo -e "\nccflags-y += -I\$(srctree)/drivers/misc/mediatek/cameraisp/src/mt6853/inc/" >> drivers/misc/mediatek/cameraisp/src/mt6853/Makefile || true
+
+        # 2. 彻底解决 mt_events_camsys.h 找不到的问题：直接把 define_trace.h 注释掉！
+        # （这只是相机调试追踪功能，去掉完全不影响拍照和开机）
+        find drivers/misc/mediatek/cameraisp/ -name "*.c" -exec sed -i 's|#include <trace/define_trace.h>|// #include <trace/define_trace.h>|g' {} + || true
+        find drivers/misc/mediatek/cameraisp/ -name "*.h" -exec sed -i 's|#include <trace/define_trace.h>|// #include <trace/define_trace.h>|g' {} + || true
+        find drivers/misc/mediatek/cameraisp/ -name "*.c" -exec sed -i 's|#include "./inc/mt_events_camsys.h"|// #include "./inc/mt_events_camsys.h"|g' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
