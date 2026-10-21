@@ -81,6 +81,14 @@ jobs:
         find . -name "motion_channel.c" -exec sed -i 's|#include <motion.h>|#include "motion.h"|g' {} + || true
         echo 'ccflags-y += -I$(srctree)/drivers/huawei_platform/sensor2_0/' >> drivers/huawei_platform/sensor2_0/Makefile || true
 
+        # 30. 修复 zrhung_common.h 找不到的问题
+        find . -path "*/hwzerohung/*.c" -exec sed -i 's|#include <zrhung_common.h>|#include "zrhung_common.h"|g' {} + || true
+        echo 'ccflags-y += -I$(srctree)/drivers/hwzerohung/' >> drivers/hwzerohung/Makefile || true
+
+        # 31. 修复联发科显示驱动 trace 头文件找不到的问题（直接物理造一个假文件，或者注释掉相关宏）
+        touch drivers/gpu/drm/mediatek/mtk_layer_layout_trace.h || true
+        find . -path "*/mediatek/*.c" -exec sed -i 's|#include TRACE_INCLUDE(TRACE_INCLUDE_FILE)|// #include TRACE_INCLUDE(TRACE_INCLUDE_FILE)|g' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
