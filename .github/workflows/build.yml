@@ -254,6 +254,18 @@ jobs:
         find drivers/misc/mediatek/cameraisp/ -name "*.h" -exec sed -i 's|#include <trace/define_trace.h>|// #include <trace/define_trace.h>|g' {} + || true
         find drivers/misc/mediatek/cameraisp/ -name "*.c" -exec sed -i 's|#include "./inc/mt_events_camsys.h"|// #include "./inc/mt_events_camsys.h"|g' {} + || true
 
+        # 50. 终极缝合：修复损坏的 Makefile 并解决 CCU 结构体缺失
+        # 1. 修复 Camera 的 Makefile（删掉咱们之前弄坏的行）
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "Makefile" -exec sed -i '/ccflags-y/d' {} + || true
+        
+        # 2. 暴力把 Camera 的 inc 文件夹里所有的头文件，全搬到它自己的当前目录下！不需要配路径了！
+        find drivers/misc/mediatek/cameraisp/src/mt6853/inc -name "*.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+
+        # 3. 解决 CCU 结构体未定义。全盘搜 ccu_types.h，全给搬过去，并把包含路径改干净
+        find . -name "ccu_types.h" -exec cp {} drivers/misc/mediatek/ccu/src/mt6833/ \; || true
+        find . -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i 's|"ccu_ext_interface/ccu_types.h"|"ccu_types.h"|g' {} + || true
+        find . -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i 's|#include <ccu_ext_interface/ccu_types.h>|#include "ccu_types.h"|g' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
