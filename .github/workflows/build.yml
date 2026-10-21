@@ -98,6 +98,15 @@ jobs:
         # 34. 修复 IOMMU 驱动找不到 mtk_iommu_ext.h 的问题（强行注入联发科平台的 include 路径）
         echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/mt-plat/mt6853/include/mach/ -I$(srctree)/drivers/misc/mediatek/include/mt-plat/mt6853/include/ -I$(srctree)/drivers/misc/mediatek/include/mt-plat/' >> drivers/iommu/Makefile || true
 
+        # 35. 乾坤大挪移：全盘搜索 mtk_iommu_ext.h，并把它复制到所有可能报错的目录下
+        find . -name "mtk_iommu_ext.h" -exec cp {} drivers/iommu/ \; || true
+        find . -name "mtk_iommu_ext.h" -exec cp {} drivers/misc/mediatek/include/mt-plat/mt6853/include/mach/ \; || true
+        find . -name "mtk_iommu_ext.h" -exec cp {} drivers/misc/mediatek/include/mt-plat/mt6853/include/ \; || true
+        find . -name "mtk_iommu_ext.h" -exec cp {} drivers/misc/mediatek/include/mt-plat/ \; || true
+
+        # 同时给 Makefile 加上老式参数兜底
+        echo 'EXTRA_CFLAGS += -I$(srctree)/drivers/misc/mediatek/include/mt-plat/mt6853/include/mach/' >> drivers/iommu/Makefile || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
