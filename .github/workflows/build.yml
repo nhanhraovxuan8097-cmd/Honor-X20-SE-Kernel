@@ -1,143 +1,41 @@
-name: Build Honor X20 SE Kernel
-
-on:
-  workflow_dispatch:
-  push:
-    branches: [ "master" ]
-
+name: Build Kernel
+on: [push, workflow_dispatch]
 jobs:
   build:
     runs-on: ubuntu-latest
     container: ubuntu:20.04
     steps:
-    - name: Checkout Source Code
-      uses: actions/checkout@v4
-
-    - name: Install Dependencies and Toolchain
-      run: |
-        apt-get update
-        DEBIAN_FRONTEND=noninteractive apt-get install -y git curl bc bison build-essential flex libssl-dev libelf-dev zip unzip python3 cpio wget gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-
-    - name: Integrate SukiSU
+    - uses: actions/checkout@v4
+    - name: Install Tools
+      run: apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y git curl bc bison build-essential flex libssl-dev libelf-dev zip unzip python3 cpio wget gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+    - name: SukiSU & Patch
       run: |
         cd Code_Opensource/kernel
         curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s main || true
-
-    - name: Patch Kernel Source
-      run: |
-        cd Code_Opensource/kernel
-        sed -i 's/recent refault: %lu/recent refault: %llu/' mm/memcg_reclaim.c || true
-        sed -i 's/inline//g' mm/memcg_policy_internal.h || true
-        sed -i 's/extern inline bool should_continue_reclaim/extern bool should_continue_reclaim/' mm/internal.h || true
-        sed -i 's/static inline bool should_continue_reclaim/bool should_continue_reclaim/' mm/vmscan.c || true
-        sed -i 's/inline void ksm_flock/void ksm_flock/' include/linux/keyslot-manager.h || true
-        sed -i 's|#include <slowpath_count.h>|#include "slowpath_count.h"|' mm/slowpath_count.c || true
-        sed -i 's|#include <clk-mux.h>|#include "clk-mux.h"|' drivers/clk/mediatek/clkdbg-mt6833.c || true
-        sed -i 's|#include <dt_idle_states.h>|#include "dt_idle_states.h"|' drivers/cpuidle/cpuidle-mediatek.c || true
-        sed -i 's/-Werror//g' Makefile || true
-        sed -i 's/-Werror//g' scripts/Makefile.extrawarn || true
-        find . -name "Makefile" -exec sed -i 's/-implicit-function-declaration//g' {} + || true
-        find . -name "Makefile" -exec sed -i 's/-Werror-implicit-function-declaration//g' {} + || true
-        find . -name "huawei_ts_kit_fsnode.c" -exec sed -i 's|#include <huawei_ts_kit.h>|#include "huawei_ts_kit.h"|' {} + || true
-        find . -name "lcd_kit_adapt.c" -exec sed -i 's|#include "lcd_kit_adapt.h"|// #include "lcd_kit_adapt.h"|' {} + || true
-        find . -name "lcd_kit_common.c" -exec sed -i '1i #include "lcd_kit_utils.h"' {} + || true
-        # 4. 修复图1：找不到 hisi 相关的电源键头文件 (直接暴力注释掉)
-        find . -name "lcd_kit_utils.h" -exec sed -i 's|#include <linux/hisi/hisi_powerkey_event.h>|// #include <linux/hisi/hisi_powerkey_event.h>|' {} + || true
-        # 5. 修复图2：找不到 helio-dvfsrc-qos.h (改成双引号优先本地查找)
-        find . -name "helio-dvfsrc-qos.c" -exec sed -i 's|#include <helio-dvfsrc-qos.h>|#include "helio-dvfsrc-qos.h"|' {} + || true
-        # 6. 修复图3：彻底清理所有子目录 Makefile 里的 -Werror 标志
-        find . -name "Makefile" -exec sed -i 's/-Werror//g' {} + || true
-        find . -name "Makefile" -exec sed -i 's/-Werror=format//g' {} + || true
-        find . -name "Kbuild" -exec sed -i 's/-Werror//g' {} + || true
-        # 7. 终极修复：全盘搜索并替换所有引用 helio-dvfsrc-qos.h 的尖括号
-        find . -type f -name "*.c" -exec sed -i 's|#include <helio-dvfsrc-qos.h>|#include "helio-dvfsrc-qos.h"|g' {} + || true
-        # 8. 修复 helio-dvfsrc 系列头文件问题（全盘把尖括号改成双引号）
-        find . -name "*.c" -exec sed -i 's|#include <helio-dvfsrc-mt6833.h>|#include "helio-dvfsrc-mt6833.h"|g' {} + || true
-        # 9. 修复找不到 hisi_fb.h 的问题（直接全盘注释掉）
-        find . -name "*.h" -exec sed -i 's|#include "hisi_fb.h"|// #include "hisi_fb.h"|g' {} + || true
-        find . -name "*.c" -exec sed -i 's|#include "hisi_fb.h"|// #include "hisi_fb.h"|g' {} + || true
-        # 10. 终极修复：把 .c 和 .h 文件里所有带尖括号的 helio-dvfsrc-qos.h 全部干掉
-        find . -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i 's|#include <helio-dvfsrc-qos.h>|#include "helio-dvfsrc-qos.h"|g' {} + || true
-        # 11. 釜底抽薪：强行把当前目录加入该模块的头文件搜索路径
-        echo 'ccflags-y += -I$(srctree)/drivers/devfreq/helio-dvfsrc-v3/' >> drivers/devfreq/helio-dvfsrc-v3/Makefile || true
-        # 12. 修复 lcd_kit_utils.h 中找不到 lcd_kit_adapt.h 的问题（直接全盘注释掉）
-        find . -name "*.h" -exec sed -i 's|#include "lcd_kit_adapt.h"|// #include "lcd_kit_adapt.h"|g' {} + || true
-        find . -name "*.c" -exec sed -i 's|#include "lcd_kit_adapt.h"|// #include "lcd_kit_adapt.h"|g' {} + || true
-        # 13. 终极防套娃：彻底注释掉 lcd_kit_utils.h 里所有引用 linux/hisi/ 的头文件
-        find . -name "lcd_kit_utils.h" -exec sed -i 's|#include <linux/hisi/|// #include <linux/hisi/|g' {} + || true
-        # 14. 终极欺骗：在 lcd_kit_utils.h 里补上缺失的假定义
-        find . -name "lcd_kit_utils.h" -exec sed -i '1i #define LCD_PANEL_VERSION_SIZE 16' {} + || true
-        find . -name "lcd_kit_utils.h" -exec sed -i '1i typedef int demura_set_info_t;' {} + || true
-        # 15. 修复 size_t 格式警告，并在该模块强制关闭 format 警告
-        find . -name "lcd_kit_adapt.c" -exec sed -i 's|"cmd len is %d\\n"|"cmd len is %zu\\n"|g' {} + || true
-        echo 'ccflags-y += -Wno-format' >> drivers/devkit/lcdkit/lcdkit3.0/kernel/mtk/adapt/Makefile || true
-        # 16. 给 lcd_kit_adapt.c 强行注入缺失的假宏定义
-        find . -name "lcd_kit_adapt.c" -exec sed -i '1i #define DTYPE_DSC_LWRITE 0x39\n#define MTK_READ_MAX_LEN 256' {} + || true
-        # 17. 彻底注释掉 huawei_ts_kit_fsnode.c 中找不到的头文件
-        find . -name "huawei_ts_kit_fsnode.c" -exec sed -i 's|#include.*huawei_ts_kit.h.*|// &|' {} + || true
-        # 18. 解决 case 值重复的冲突（把 DSC 的 case 注释掉）
-        find . -name "lcd_kit_adapt.c" -exec sed -i 's|case DTYPE_DSC_LWRITE:|// case DTYPE_DSC_LWRITE:|g' {} + || true
-        # 19. 彻底干掉 huawei_ts_kit.h
-        find . -name "huawei_ts_kit_fsnode.c" -exec sed -i 's|.*#include.*huawei_ts_kit.h.*|// &|g' {} + || true
-        find . -name "*.h" -exec sed -i 's|.*#include.*huawei_ts_kit.h.*|// &|g' {} + || true
-        # 20. 彻底干掉找不到的 bias_bl_utils.h
-        find . -name "*.h" -exec sed -i 's|.*#include.*bias_bl_utils.h.*|// &|g' {} + || true
-        find . -name "*.c" -exec sed -i 's|.*#include.*bias_bl_utils.h.*|// &|g' {} + || true
-        # 21. 终极绝杀：直接把这个文件里带有 huawei_ts_kit.h 的那一行连根拔起！
-        sed -i '/huawei_ts_kit.h/d' drivers/devkit/tpkit/3_0/huawei_ts_kit_fsnode.c || true
-        # 22. 终极防线：把 tpkit/3_0 目录加入头文件搜索路径，一劳永逸解决所有尖括号问题
-        echo 'ccflags-y += -I$(srctree)/drivers/devkit/tpkit/3_0/' >> drivers/devkit/tpkit/3_0/Makefile || true
-        # 24. 强行补全由于缺头文件导致丢失的两个宏定义
-        find . -name "huawei_ts_kit_fsnode.c" -exec sed -i '1i #define TS_WORK_IN_SLEEP 0\n#define SUSPEND_NEED_CAP_TEST 0' {} + || true
-        # 终极修复：把 tpkit 目录下所有的 <huawei_ts_kit 尖括号改成双引号
-        find drivers/devkit/tpkit/ -name "*.c" -exec sed -i 's|#include <huawei_ts_kit|#include "huawei_ts_kit|g' {} + || true
-        find drivers/devkit/tpkit/ -name "*.h" -exec sed -i 's|#include <huawei_ts_kit|#include "huawei_ts_kit|g' {} + || true
-        # 釜底抽薪：直接把当前目录写进这个模块的 Makefile 里
-        echo 'ccflags-y += -I$(srctree)/drivers/devkit/tpkit/3_0/' >> drivers/devkit/tpkit/3_0/Makefile || true
-        # 25. 修复背光驱动 ktd3136.c 的格式错误
-        find . -name "ktd3136.c" -exec sed -i 's|errno = %ld|errno = %d|g' {} + || true
-        # 26. 彻底、完全、暴力地清理整个内核里所有的 -Werror（包括 Kbuild）
-        find . -name "Makefile" -exec sed -i 's/-Werror//g' {} + || true
-        find . -name "Kbuild" -exec sed -i 's/-Werror//g' {} + || true
-        find . -name "Makefile" -exec sed -i 's/-Werror=return-type//g' {} + || true
-        # 终极扫尾：全盘清理所有 -Werror
-        find . -name "Makefile" -exec sed -i 's/-Werror//g' {} + || true
-        find . -name "Kbuild" -exec sed -i 's/-Werror//g' {} + || true
-        # 终极缝合：直接清空 3_0 目录的 Makefile，不让它编译，但让它乖乖生成空的 built-in.o
-        echo "" > drivers/devkit/tpkit/3_0/Makefile || true
-        # 终极造假：清空 Makefile 并强制创建一个空的 built-in.o 骗过系统
+        find . -name "*.c" -o -name "*.h" | xargs sed -i 's|#include <huawei_ts_kit|#include "huawei_ts_kit|g' || true
+        find . -name "*.c" -o -name "*.h" | xargs sed -i 's|#include <helio-dvfsrc|#include "helio-dvfsrc|g' || true
+        find . -name "*.c" -o -name "*.h" | xargs sed -i 's|#include <clk-mux.h>|#include "clk-mux.h"|g' || true
+        find . -name "Makefile" -o -name "Kbuild" | xargs sed -i 's/-Werror//g' || true
         echo "" > drivers/devkit/tpkit/3_0/Makefile || true
         touch drivers/devkit/tpkit/3_0/built-in.o || true
-
-    - name: Build Kernel
+    - name: Build
       run: |
         cd Code_Opensource/kernel
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
-        # 依旧保留你的闭麦指令
-        export KCFLAGS="-Wno-error -Wno-format -Wno-format-security -Wno-format-overflow -Wno-format-truncation -Wno-return-type -Wno-unused-variable -Wno-unused-function"
+        export KCFLAGS="-Wno-error -Wno-format -Wno-return-type"
         make merge_full_k6833v1_64_defconfig
         sed -i 's/^CONFIG_HW_ROOT_SCAN=y/# CONFIG_HW_ROOT_SCAN is not set/' .config || true
-        sed -i 's/^CONFIG_HUAWEI_EIMA=y/# CONFIG_HUAWEI_EIMA is not set/' .config || true
-        sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' .config || true
-        sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' .config || true
-        
-        # 【关键修改】先单独编译这个出问题的模块，不加 -j 参数（单线程）
         make drivers/huawei_platform/
-        
-        # 如果上面通过了，再编译整个内核
         make -j$(nproc) Image.gz
-
-    - name: Package with AnyKernel3
+    - name: Package
       run: |
         git clone https://github.com/osm0sis/AnyKernel3.git -b master anykernel
         cd anykernel
         cp ../Code_Opensource/kernel/arch/arm64/boot/Image.gz .
         sed -i 's/device.name1=.*/device.name1=* /' anykernel.sh
         zip -r9 ../Honor-X20-SE-Kernel.zip *
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v4
       with:
         name: Kernel-SukiSU-AnyKernel3
         path: Honor-X20-SE-Kernel.zip
