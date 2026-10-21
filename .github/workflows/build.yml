@@ -198,6 +198,18 @@ jobs:
         find . -name "camera_isp.c" -exec sed -i 's|../../../common/isp_common.h|isp_common.h|g' {} + || true
         find . -name "isp_common.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
 
+        # 46. 暴力正则替换：不管前面的路径是什么，统统改成双引号本地查找
+        # 1. 相机 isp_common.h
+        find . -name "camera_isp.c" -exec sed -i 's|.*#include.*isp_common\.h.*|#include "isp_common.h"|g' {} + || true
+        find . -name "isp_common.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+
+        # 2. Pinctrl gpiolib.h
+        find . -name "pinctrl-mtk-common-v2_debug.c" -exec sed -i 's|.*#include.*gpiolib\.h.*|#include <linux/gpio/gpiolib.h>|g' {} + || true
+
+        # 3. CCU ccu_ext_interface.h
+        find . -name "ccu_hw.c" -exec sed -i 's|.*#include.*ccu_ext_interface\.h.*|#include "ccu_ext_interface.h"|g' {} + || true
+        find . -name "ccu_ext_interface.h" -exec cp {} drivers/misc/mediatek/ccu/src/mt6833/ \; || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
