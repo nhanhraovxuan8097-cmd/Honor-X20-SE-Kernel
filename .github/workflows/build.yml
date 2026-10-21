@@ -114,13 +114,18 @@ jobs:
         cd Code_Opensource/kernel
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
+        # 依旧保留你的闭麦指令
+        export KCFLAGS="-Wno-error -Wno-format -Wno-format-security -Wno-format-overflow -Wno-format-truncation -Wno-return-type -Wno-unused-variable -Wno-unused-function"
         make merge_full_k6833v1_64_defconfig
         sed -i 's/^CONFIG_HW_ROOT_SCAN=y/# CONFIG_HW_ROOT_SCAN is not set/' .config || true
         sed -i 's/^CONFIG_HUAWEI_EIMA=y/# CONFIG_HUAWEI_EIMA is not set/' .config || true
         sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' .config || true
         sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' .config || true
-        # 终极闭麦：必须在 make 命令所在的步骤里设置，才能生效！
-        export KCFLAGS="-Wno-error -Wno-format -Wno-format-security -Wno-format-overflow -Wno-format-truncation -Wno-return-type"
+        
+        # 【关键修改】先单独编译这个出问题的模块，不加 -j 参数（单线程）
+        make drivers/huawei_platform/
+        
+        # 如果上面通过了，再编译整个内核
         make -j$(nproc) Image.gz
 
     - name: Package with AnyKernel3
