@@ -110,6 +110,17 @@ jobs:
         # 36. 修复新版 GCC 对 blk_crypto_flock 强制内联的报错
         sed -i 's/inline void blk_crypto_flock/void blk_crypto_flock/' include/linux/blk-crypto.h || true
 
+        # 37. 批量解决联发科底层的头文件找不到问题（图1-图5连环雷）
+        # 图1：autok.h
+        echo 'ccflags-y += -I$(srctree)/drivers/mmc/host/mediatek/ComboA' >> drivers/mmc/host/mediatek/ComboA/Makefile || true
+        # 图2：cache_ctrl.h
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/cache-auditor' >> drivers/misc/mediatek/cache-auditor/Makefile || true
+        # 图3：slbc.h
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/slbc' >> drivers/misc/mediatek/base/power/slbc/Makefile || true
+        # 图4 & 图5：mtk_ppm_platform.h
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/ppm_v3/src/mach/mt6853' >> drivers/misc/mediatek/base/power/ppm_v3/Makefile || true
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/ppm_v3/inc' >> drivers/misc/mediatek/base/power/ppm_v3/Makefile || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
