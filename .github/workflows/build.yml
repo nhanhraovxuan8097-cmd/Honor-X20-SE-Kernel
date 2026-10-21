@@ -121,6 +121,11 @@ jobs:
         echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/ppm_v3/src/mach/mt6853' >> drivers/misc/mediatek/base/power/ppm_v3/Makefile || true
         echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/ppm_v3/inc' >> drivers/misc/mediatek/base/power/ppm_v3/Makefile || true
 
+        # 38. 物理搬家：把 mtk_ppm_platform.h 复制到报错的 mt6853 目录下，并强行修改该目录的 Makefile
+        find . -name "mtk_ppm_platform.h" -exec cp {} drivers/misc/mediatek/base/power/ppm_v3/src/mach/mt6853/ \; || true
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/ppm_v3/src/mach/mt6853/' >> drivers/misc/mediatek/base/power/ppm_v3/src/mach/mt6853/Makefile || true
+        echo 'EXTRA_CFLAGS += -I$(srctree)/drivers/misc/mediatek/base/power/ppm_v3/src/mach/mt6853/' >> drivers/misc/mediatek/base/power/ppm_v3/src/mach/mt6853/Makefile || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
