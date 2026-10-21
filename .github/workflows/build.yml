@@ -210,6 +210,27 @@ jobs:
         find . -name "ccu_hw.c" -exec sed -i 's|.*#include.*ccu_ext_interface\.h.*|#include "ccu_ext_interface.h"|g' {} + || true
         find . -name "ccu_ext_interface.h" -exec cp {} drivers/misc/mediatek/ccu/src/mt6833/ \; || true
 
+        # 47. 终极全量补丁：针对 CCU、Pinctrl、Camera 的连环暴击
+        # 1. 彻底解决 CCU 头文件找不到（所有包含该文件的 .c 和 .h，统统改路径并搬文件）
+        find . -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i 's|"ccu_ext_interface/ccu_ext_interface.h"|"ccu_ext_interface.h"|g' {} + || true
+        find . -name "ccu_ext_interface.h" -exec cp {} drivers/misc/mediatek/ccu/src/mt6833/ \; || true
+        find . -name "ccu_ext_interface.h" -exec cp {} drivers/misc/mediatek/ccu/src/mt6833/ccu_ext_interface/ \; || true
+
+        # 2. 彻底解决 Pinctrl gpiolib.h 的问题
+        find . -name "pinctrl-mtk-common-v2_debug.c" -exec sed -i 's|#include <linux/gpio/gpiolib.h>|#include "gpiolib.h"|g' {} + || true
+        find . -name "gpiolib.h" -exec cp {} drivers/pinctrl/mediatek/ \; || true
+
+        # 3. 彻底解决 Camera 的 inc/ 目录找不到问题
+        find . -name "cam_qos.c" -exec sed -i 's|#include "inc/camera_isp.h"|#include "camera_isp.h"|g' {} + || true
+        find . -name "camera_isp.c" -exec sed -i 's|#include "./inc/mt_events_camsys.h"|#include "mt_events_camsys.h"|g' {} + || true
+        find . -name "camera_isp.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+        find . -name "mt_events_camsys.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+
+        # 4. 终极兜底：直接把所有 medatek 下的 inc 文件夹内容全盘复制过去
+        if [ -d "drivers/misc/mediatek/cameraisp/src/mt6853/inc" ]; then
+            cp -r drivers/misc/mediatek/cameraisp/src/mt6853/inc/* drivers/misc/mediatek/cameraisp/src/mt6853/ || true
+        fi
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
