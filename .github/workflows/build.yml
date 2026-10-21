@@ -25,7 +25,11 @@ jobs:
         export CROSS_COMPILE=aarch64-linux-gnu-
         export KCFLAGS="-Wno-error -Wno-format -Wno-return-type"
         make merge_full_k6833v1_64_defconfig
+        # 必须把这几行加回来，关闭冲突的安全保护！
         sed -i 's/^CONFIG_HW_ROOT_SCAN=y/# CONFIG_HW_ROOT_SCAN is not set/' .config || true
+        sed -i 's/^CONFIG_HUAWEI_EIMA=y/# CONFIG_HUAWEI_EIMA is not set/' .config || true
+        sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' .config || true
+        sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' .config || true
         make drivers/huawei_platform/
         make -j$(nproc) Image.gz
     - name: Package
