@@ -89,6 +89,9 @@ jobs:
         touch drivers/gpu/drm/mediatek/mtk_layer_layout_trace.h || true
         find . -path "*/mediatek/*.c" -exec sed -i 's|#include TRACE_INCLUDE(TRACE_INCLUDE_FILE)|// #include TRACE_INCLUDE(TRACE_INCLUDE_FILE)|g' {} + || true
 
+        # 32. 彻底关闭联发科显示驱动的 Trace 功能，直接干掉它的源头
+        find drivers/gpu/drm/mediatek/ -name "*.c" -exec sed -i 's|#define CREATE_TRACE_POINTS|// #define CREATE_TRACE_POINTS|g' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
