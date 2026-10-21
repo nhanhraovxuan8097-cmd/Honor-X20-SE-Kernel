@@ -131,6 +131,23 @@ jobs:
         find . -name "mtk_swpm_platform.h" -exec cp {} drivers/misc/mediatek/base/power/swpm_v1/mt6833/ \; || true
         echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/include/swpm_v1/' >> drivers/misc/mediatek/base/power/swpm_v1/Makefile || true
 
+        # 40. 终极连环清雷：批量搬运联发科乱找的头文件
+        # 图1：解决 SWPM 的 VDD12_DRAM/VDD18_DRAM 未声明（直接强行替换宏定义）
+        find . -name "mtk_swpm_platform.c" -exec sed -i 's/VDD12_DRAM/VIO18_DRAM/g' {} + || true
+        find . -name "mtk_swpm_platform.c" -exec sed -i 's/VDD18_DRAM/VIO18_DRAM/g' {} + || true
+
+        # 图2：相机ISP模块的 ../common/isp_common.h 找不到
+        find . -name "isp_common.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+        find . -name "isp_common.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/ \; || true
+
+        # 图3：Pinctrl 模块的 ../../../gpio/gpiolib.h 找不到
+        find . -name "gpiolib.h" -exec cp {} drivers/pinctrl/mediatek/ \; || true
+
+        # 图4：充电器和电量计的 mtk_charger_intf.h / mtk_gauge_class.h 找不到
+        find . -name "mtk_charger_intf.h" -exec cp {} drivers/power/supply/mediatek/charger/ \; || true
+        find . -name "mtk_gauge_class.h" -exec cp {} drivers/power/supply/mediatek/battery/ \; || true
+        find . -name "mtk_gauge_class.h" -exec cp {} drivers/power/supply/mediatek/charger/ \; || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
