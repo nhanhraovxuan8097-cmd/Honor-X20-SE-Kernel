@@ -174,6 +174,18 @@ jobs:
         echo 'ccflags-y += -I$(srctree)/drivers/power/supply/mediatek/battery/' >> drivers/power/supply/mediatek/battery/Makefile || true
         echo 'ccflags-y += -I$(srctree)/drivers/power/supply/mediatek/charger/' >> drivers/power/supply/mediatek/charger/Makefile || true
 
+        # 43. 最终扫尾：解决相机、Pinctrl、CCU的路径瞎找问题
+        # 1. 解决 ccu_hw.c 找不到子目录头文件
+        find . -type d -name "ccu_ext_interface" -exec cp -r {} drivers/misc/mediatek/ccu/src/mt6833/ \; || true
+
+        # 2. 解决 pinctrl 找不到 gpiolib.h
+        find . -name "pinctrl-mtk-common-v2_debug.c" -exec sed -i 's|#include "../../../gpio/gpiolib.h"|#include "gpiolib.h"|g' {} + || true
+        find . -name "gpiolib.h" -exec cp {} drivers/pinctrl/mediatek/ \; || true
+
+        # 3. 解决 camera_isp.c 找不到 isp_common.h
+        find . -name "camera_isp.c" -exec sed -i 's|#include "../../../common/isp_common.h"|#include "isp_common.h"|g' {} + || true
+        find . -name "isp_common.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
