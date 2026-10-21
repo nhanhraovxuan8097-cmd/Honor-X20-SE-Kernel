@@ -148,6 +148,9 @@ jobs:
         find . -name "mtk_gauge_class.h" -exec cp {} drivers/power/supply/mediatek/battery/ \; || true
         find . -name "mtk_gauge_class.h" -exec cp {} drivers/power/supply/mediatek/charger/ \; || true
 
+        # 41. 注释掉多余的 case VIO18_DRAM，解决重复冲突
+        sed -i '1214s/case VIO18_DRAM:/\/\/ case VIO18_DRAM:/' drivers/misc/mediatek/base/power/swpm_v1/mt6833/mtk_swpm_platform.c || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
