@@ -186,6 +186,18 @@ jobs:
         find . -name "camera_isp.c" -exec sed -i 's|#include "../../../common/isp_common.h"|#include "isp_common.h"|g' {} + || true
         find . -name "isp_common.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
 
+        # 44. 终极收官：强行修正相对路径与宏定义冲突
+        # 1. 解决 SWPM 找不到 VDD18_DRAM 的问题（直接删掉这行多余的 case）
+        find . -name "mtk_swpm_platform.c" -exec sed -i 's/case VDD18_DRAM:/\/\/ case VDD18_DRAM:/g' {} + || true
+
+        # 2. 解决 Pinctrl 找不到 gpiolib.h（把恶心相对路径替换掉，并复制头文件过去）
+        find . -name "pinctrl-mtk-common-v2_debug.c" -exec sed -i 's|../../../gpio/gpiolib.h|gpiolib.h|g' {} + || true
+        find . -name "gpiolib.h" -exec cp {} drivers/pinctrl/mediatek/ \; || true
+
+        # 3. 解决 Camera ISP 找不到 isp_common.h
+        find . -name "camera_isp.c" -exec sed -i 's|../../../common/isp_common.h|isp_common.h|g' {} + || true
+        find . -name "isp_common.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
