@@ -92,6 +92,9 @@ jobs:
         # 32. 彻底关闭联发科显示驱动的 Trace 功能，直接干掉它的源头
         find drivers/gpu/drm/mediatek/ -name "*.c" -exec sed -i 's|#define CREATE_TRACE_POINTS|// #define CREATE_TRACE_POINTS|g' {} + || true
 
+        # 33. 修复联发科 DRM 驱动找不到 mtk_drm_drv.h 的问题
+        find drivers/gpu/drm/mediatek/ -name "*.c" -exec sed -i 's|#include <mtk_drm_drv.h>|#include "mtk_drm_drv.h"|g' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
