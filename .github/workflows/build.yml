@@ -231,6 +231,17 @@ jobs:
             cp -r drivers/misc/mediatek/cameraisp/src/mt6853/inc/* drivers/misc/mediatek/cameraisp/src/mt6853/ || true
         fi
 
+        # 48. 终极斩断套娃：强行修正 CCU 内部路径，强行复活 Camera Trace
+        # 1. 解决 ccu_ext_interface.h 里面的套娃问题
+        find . -name "ccu_ext_interface.h" -exec sed -i 's|#include "ccu_ext_interface/ccu_types.h"|#include "ccu_types.h"|g' {} + || true
+        find . -name "ccu_types.h" -exec cp {} drivers/misc/mediatek/ccu/src/mt6833/ \; || true
+
+        # 2. 彻底解决 Camera 的 trace 宏去 ./inc/ 目录瞎找的问题（直接造个假的 inc 目录给它）
+        mkdir -p drivers/misc/mediatek/cameraisp/src/mt6853/inc || true
+        find . -name "mt_events_camsys.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/inc/ \; || true
+        find . -name "mt_events_camsys.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/cameraisp/src/mt6853/inc/' >> drivers/misc/mediatek/cameraisp/src/mt6853/Makefile || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
