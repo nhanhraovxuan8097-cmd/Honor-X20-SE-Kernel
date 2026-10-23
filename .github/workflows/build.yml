@@ -328,6 +328,14 @@ jobs:
         find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's/ion_sec_heap_destroy(pIon_client);/ion_sec_heap_destroy((struct ion_heap *)pIon_client);/g' {} + || true
         find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's/handle = ion_import_dma_buf_fd(client, fd);/handle = (struct ion_handle *)ion_import_dma_buf_fd(client, fd);/g' {} + || true
 
+        # 61. 放弃使用华为不兼容的 ION 内存分配接口
+        # 强行让 client 为空
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's|pIon_client = ion_sec_heap_create(g_ion_device, "camera_isp");|pIon_client = NULL;|g' {} + || true
+        # 强行注释掉 destroy 调用
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's|ion_sec_heap_destroy((struct ion_heap \*)pIon_client);|// ion_sec_heap_destroy(pIon_client);|g' {} + || true
+        # 强行把 handle 置空
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's|handle = (struct ion_handle \*)ion_import_dma_buf_fd(client, fd);|handle = NULL;|g' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
