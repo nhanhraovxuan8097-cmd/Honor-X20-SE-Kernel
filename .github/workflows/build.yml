@@ -289,6 +289,12 @@ jobs:
         # 2. 全盘搜出这个头文件，强行物理复制到当前目录
         find . -name "clk-mt6833-pg.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
 
+        # 54. 解决 camera_isp.c 找不到 smi_public.h 的问题
+        # 把尖括号强行换成双引号
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "*.c" -exec sed -i 's|#include <smi_public.h>|#include "smi_public.h"|g' {} + || true
+        # 全盘搜索这个头文件，找到后直接复制到报错的当前目录
+        find . -name "smi_public.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
