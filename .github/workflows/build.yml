@@ -324,6 +324,10 @@ jobs:
         # 对于 ion_import_dma_buf_fd 和 ion_free，可能是头文件没包含，强制加上声明
         find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i '1i #include "ion.h"' {} + || true
 
+        # 60. 强制类型转换，解决指针不兼容和整型转换警告
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's/ion_sec_heap_destroy(pIon_client);/ion_sec_heap_destroy((struct ion_heap *)pIon_client);/g' {} + || true
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's/handle = ion_import_dma_buf_fd(client, fd);/handle = (struct ion_handle *)ion_import_dma_buf_fd(client, fd);/g' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
@@ -334,7 +338,7 @@ jobs:
         sed -i 's/^CONFIG_HUAWEI_EIMA=y/# CONFIG_HUAWEI_EIMA is not set/' .config || true
         sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' .config || true
         sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' .config || true
-        export KCFLAGS="-Wno-error -Wno-format -Wno-format-security -Wno-format-overflow -Wno-format-truncation -Wno-return-type -Wno-unused-variable -Wno-unused-function -Wno-implicit-function-declaration"
+        export KCFLAGS="-Wno-error -Wno-format -Wno-format-security -Wno-format-overflow -Wno-format-truncation -Wno-return-type -Wno-unused-variable -Wno-unused-function -Wno-implicit-function-declaration -Wno-incompatible-pointer-types -Wno-int-conversion"
         make drivers/huawei_platform/
         make -j$(nproc) Image.gz
 
