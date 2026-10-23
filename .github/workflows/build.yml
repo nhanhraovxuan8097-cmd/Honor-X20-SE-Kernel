@@ -278,6 +278,11 @@ jobs:
         printf "ccflags-y += -I\$(srctree)/drivers/misc/mediatek/cameraisp/src/mt6853/inc/\n" > drivers/misc/mediatek/cameraisp/src/mt6853/Makefile
         printf "obj-y += \$(patsubst %%.c,%%.o,\$(wildcard *.c))\n" >> drivers/misc/mediatek/cameraisp/src/mt6853/Makefile
 
+        # 彻底重写被搞坏的相机 Makefile，使用绝对路径抓取 .c 文件
+        rm -f drivers/misc/mediatek/cameraisp/src/mt6853/Makefile || true
+        printf "ccflags-y += -I\$(srctree)/drivers/misc/mediatek/cameraisp/src/mt6853/inc/\n" > drivers/misc/mediatek/cameraisp/src/mt6853/Makefile
+        printf "obj-y += \$(patsubst %%.c,%%.o,\$(notdir \$(wildcard \$(srctree)/\$(src)/*.c)))\n" >> drivers/misc/mediatek/cameraisp/src/mt6853/Makefile
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
