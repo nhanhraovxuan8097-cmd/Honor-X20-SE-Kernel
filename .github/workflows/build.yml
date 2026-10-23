@@ -317,28 +317,16 @@ jobs:
         find . -name "ion.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
         find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "ion_drv.h" -exec sed -i 's|#include <ion.h>|#include "ion.h"|g' {} + || true
 
-        # 59. 替换被华为魔改的 ION 函数名，并强制闭麦
-        # 1. 强行替换函数名
-        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's/ion_client_create/ion_sec_heap_create/g' {} + || true
-        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's/ion_client_destroy/ion_sec_heap_destroy/g' {} + || true
-        # 对于 ion_import_dma_buf_fd 和 ion_free，可能是头文件没包含，强制加上声明
-        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i '1i #include "ion.h"' {} + || true
-
-        # 60. 强制类型转换，解决指针不兼容和整型转换警告
-        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's/ion_sec_heap_destroy(pIon_client);/ion_sec_heap_destroy((struct ion_heap *)pIon_client);/g' {} + || true
-        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's/handle = ion_import_dma_buf_fd(client, fd);/handle = (struct ion_handle *)ion_import_dma_buf_fd(client, fd);/g' {} + || true
-
-        # 61. 放弃使用华为不兼容的 ION 内存分配接口
-        # 强行让 client 为空
-        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's|pIon_client = ion_sec_heap_create(g_ion_device, "camera_isp");|pIon_client = NULL;|g' {} + || true
-        # 强行注释掉 destroy 调用
-        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's|ion_sec_heap_destroy((struct ion_heap \*)pIon_client);|// ion_sec_heap_destroy(pIon_client);|g' {} + || true
-        # 强行把 handle 置空
-        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's|handle = (struct ion_handle \*)ion_import_dma_buf_fd(client, fd);|handle = NULL;|g' {} + || true
-
-        # 62. 终极绝杀：如果相机 ISP 实在无法编译，彻底把这个文件从编译列表里踢出去！
-        # 方法：直接重写该模块的 Makefile，只编译 dummy.o，不编译那个惹事的 camera_isp.c
-        echo "obj-y += cameraisp_dummy.o" > drivers/misc/mediatek/cameraisp/src/mt6853/Makefile || true
+        # ==========================================
+        # 终极修复：恢复原生 ION 接口，补全头文件（替换之前的错误修改）
+        # ==========================================
+        # 1. 把之前瞎改名的地方恢复成原厂的标准函数
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's/ion_sec_heap_create/ion_client_create/g' {} + || true
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's/ion_sec_heap_destroy/ion_client_destroy/g' {} + || true
+        
+        # 2. 把源码里真正的 ion.h 强行塞给相机目录，让它认识这些标准函数
+        find . -path "*/include/linux/ion.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+        find . -path "*/drivers/staging/android/ion/ion.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
 
     - name: Build Kernel
       run: |
