@@ -328,6 +328,9 @@ jobs:
         find . -path "*/include/linux/ion.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
         find . -path "*/drivers/staging/android/ion/ion.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
 
+        # 修复被强行复制过来的 ion_drv.h 中的相对路径报错
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "ion_drv.h" -exec sed -i 's|#include "../uapi/ion.h"|#include "ion.h"|g' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
