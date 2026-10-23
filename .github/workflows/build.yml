@@ -310,6 +310,9 @@ jobs:
         find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "*.c" -exec sed -i 's|#include <archcounter_timesync.h>|#include "archcounter_timesync.h"|g' {} + || true
         find . -name "archcounter_timesync.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
 
+        # 57. 解决 camera_isp.c 找不到 ion_drv.h 的问题
+        find . -name "ion_drv.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
