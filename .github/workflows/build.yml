@@ -283,6 +283,12 @@ jobs:
         printf "ccflags-y += -I\$(srctree)/drivers/misc/mediatek/cameraisp/src/mt6853/inc/\n" > drivers/misc/mediatek/cameraisp/src/mt6853/Makefile
         printf "obj-y += \$(patsubst %%.c,%%.o,\$(notdir \$(wildcard \$(srctree)/\$(src)/*.c)))\n" >> drivers/misc/mediatek/cameraisp/src/mt6853/Makefile
 
+        # 53. 解决 camera_isp.c 找不到 clk-mt6833-pg.h 的问题
+        # 1. 把尖括号改成双引号，优先本地查找
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "*.c" -exec sed -i 's|#include <clk-mt6833-pg.h>|#include "clk-mt6833-pg.h"|g' {} + || true
+        # 2. 全盘搜出这个头文件，强行物理复制到当前目录
+        find . -name "clk-mt6833-pg.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
