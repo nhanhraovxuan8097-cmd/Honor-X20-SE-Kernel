@@ -306,6 +306,10 @@ jobs:
         # 直接把报错的语句注释掉（一劳永逸）
         sed -i 's|\$(error .* not exists. Stop.)|# &|g' drivers/misc/mediatek/connectivity/Makefile || true
 
+        # 56. 解决 camera_isp.c 找不到 archcounter_timesync.h 的问题
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "*.c" -exec sed -i 's|#include <archcounter_timesync.h>|#include "archcounter_timesync.h"|g' {} + || true
+        find . -name "archcounter_timesync.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
