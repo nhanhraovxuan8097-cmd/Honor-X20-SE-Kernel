@@ -313,6 +313,10 @@ jobs:
         # 57. 解决 camera_isp.c 找不到 ion_drv.h 的问题
         find . -name "ion_drv.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
 
+        # 58. 解决 ion_drv.h 找不到 ion.h 的问题
+        find . -name "ion.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "ion_drv.h" -exec sed -i 's|#include <ion.h>|#include "ion.h"|g' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
