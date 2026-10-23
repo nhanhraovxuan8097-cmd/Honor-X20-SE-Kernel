@@ -273,6 +273,11 @@ jobs:
         sed -i '/ccflags-y/d' drivers/misc/mediatek/cameraisp/src/mt6853/Makefile || true
         printf "\nccflags-y += -I\$(srctree)/drivers/misc/mediatek/cameraisp/src/mt6853/inc/\n" >> drivers/misc/mediatek/cameraisp/src/mt6853/Makefile || true
 
+        # 直接重写被破坏的相机 Makefile
+        rm -f drivers/misc/mediatek/cameraisp/src/mt6853/Makefile || true
+        printf "ccflags-y += -I\$(srctree)/drivers/misc/mediatek/cameraisp/src/mt6853/inc/\n" > drivers/misc/mediatek/cameraisp/src/mt6853/Makefile
+        printf "obj-y += \$(patsubst %%.c,%%.o,\$(wildcard *.c))\n" >> drivers/misc/mediatek/cameraisp/src/mt6853/Makefile
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
