@@ -317,6 +317,13 @@ jobs:
         find . -name "ion.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
         find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "ion_drv.h" -exec sed -i 's|#include <ion.h>|#include "ion.h"|g' {} + || true
 
+        # 59. 替换被华为魔改的 ION 函数名，并强制闭麦
+        # 1. 强行替换函数名
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's/ion_client_create/ion_sec_heap_create/g' {} + || true
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's/ion_client_destroy/ion_sec_heap_destroy/g' {} + || true
+        # 对于 ion_import_dma_buf_fd 和 ion_free，可能是头文件没包含，强制加上声明
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i '1i #include "ion.h"' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
@@ -327,7 +334,7 @@ jobs:
         sed -i 's/^CONFIG_HUAWEI_EIMA=y/# CONFIG_HUAWEI_EIMA is not set/' .config || true
         sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' .config || true
         sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' .config || true
-        export KCFLAGS="-Wno-error -Wno-format -Wno-format-security -Wno-format-overflow -Wno-format-truncation -Wno-return-type -Wno-unused-variable -Wno-unused-function"
+        export KCFLAGS="-Wno-error -Wno-format -Wno-format-security -Wno-format-overflow -Wno-format-truncation -Wno-return-type -Wno-unused-variable -Wno-unused-function -Wno-implicit-function-declaration"
         make drivers/huawei_platform/
         make -j$(nproc) Image.gz
 
