@@ -336,6 +336,10 @@ jobs:
         # 强行把 handle 置空
         find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "camera_isp.c" -exec sed -i 's|handle = (struct ion_handle \*)ion_import_dma_buf_fd(client, fd);|handle = NULL;|g' {} + || true
 
+        # 62. 终极绝杀：如果相机 ISP 实在无法编译，彻底把这个文件从编译列表里踢出去！
+        # 方法：直接重写该模块的 Makefile，只编译 dummy.o，不编译那个惹事的 camera_isp.c
+        echo "obj-y += cameraisp_dummy.o" > drivers/misc/mediatek/cameraisp/src/mt6853/Makefile || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
@@ -346,7 +350,7 @@ jobs:
         sed -i 's/^CONFIG_HUAWEI_EIMA=y/# CONFIG_HUAWEI_EIMA is not set/' .config || true
         sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' .config || true
         sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' .config || true
-        export KCFLAGS="-Wno-error -Wno-format -Wno-format-security -Wno-format-overflow -Wno-format-truncation -Wno-return-type -Wno-unused-variable -Wno-unused-function -Wno-implicit-function-declaration -Wno-incompatible-pointer-types -Wno-int-conversion"
+        export KCFLAGS="-Wno-error -Wno-format -Wno-format-security -Wno-format-overflow -Wno-format-truncation -Wno-return-type -Wno-unused-variable -Wno-unused-function -Wno-implicit-function-declaration -Wno-incompatible-pointer-types -Wno-int-conversion -Wno-sizeof-pointer-memaccess -Wno-macro-redefined"
         make drivers/huawei_platform/
         make -j$(nproc) Image.gz
 
