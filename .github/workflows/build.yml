@@ -331,6 +331,10 @@ jobs:
         # 修复被强行复制过来的 ion_drv.h 中的相对路径报错
         find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "ion_drv.h" -exec sed -i 's|#include "../uapi/ion.h"|#include "ion.h"|g' {} + || true
 
+        # 64. 终极物理造路：顺着 ion_drv.h 的要求，直接建个 uapi 文件夹把 ion.h 塞进去
+        mkdir -p drivers/misc/mediatek/cameraisp/src/uapi || true
+        find . -name "ion.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/uapi/ \; || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
