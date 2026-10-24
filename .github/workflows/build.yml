@@ -335,6 +335,12 @@ jobs:
         mkdir -p drivers/misc/mediatek/cameraisp/src/uapi || true
         find . -name "ion.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/uapi/ \; || true
 
+        # 65. 物理搬运：解决 cam_qos.c 找不到 mmdvfs_pmqos.h 的问题
+        # 1. 全盘搜出这个头文件，复制到相机目录
+        find . -name "mmdvfs_pmqos.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+        # 2. 把 cam_qos.c 里的尖括号改成双引号，优先本地查找
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "cam_qos.c" -exec sed -i 's|#include <mmdvfs_pmqos.h>|#include "mmdvfs_pmqos.h"|g' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
