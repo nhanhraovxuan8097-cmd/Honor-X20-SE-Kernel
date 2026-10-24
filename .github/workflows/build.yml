@@ -355,8 +355,8 @@ jobs:
         sed -i 's/return do_execveat_common(fd, filename, argv, envp, flags);/return ksu_handle_execveat(fd, filename, argv, envp, flags);/' fs/exec.c
         grep -q "ksu_handle_execveat" fs/exec.c || { echo "ERROR: Hook execveat 注入失败，请检查 fs/exec.c"; exit 1; }
 
-        # 2. 注入 faccessat
-        sed -i 's/return do_faccessat(dfd, filename, mode, flags);/return ksu_handle_faccessat(dfd, filename, mode, flags);/' fs/open.c
+        # 2. 注入 faccessat（精准匹配 4.14 的 SYSCALL_DEFINE3，直接插入到函数开头）
+        sed -i '/SYSCALL_DEFINE3(faccessat, int, dfd, const char __user \*, filename, int, mode)/a\	ksu_handle_faccessat(\&dfd, \&filename, \&mode, NULL);' fs/open.c
         grep -q "ksu_handle_faccessat" fs/open.c || { echo "ERROR: Hook faccessat 注入失败，请检查 fs/open.c"; exit 1; }
 
         # 3. 注入 stat (注意 4.14 内核可能用 vfs_statx)
