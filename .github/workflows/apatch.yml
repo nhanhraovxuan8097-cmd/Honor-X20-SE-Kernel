@@ -203,6 +203,13 @@ jobs:
         # 彻底屏蔽缺少闭源 osal.h 的蓝牙模块 (bt)
         echo "obj-y := " > drivers/misc/mediatek/connectivity/bt/Makefile || true
 
+        # 精准救援：解决 FM 收音机找不到 osal_typedef.h 的问题
+        # 1. 全盘搜出这个头文件，复制到报错的当前目录
+        find . -name "osal_typedef.h" -exec cp {} drivers/misc/mediatek/connectivity/fmradio/chips/mt6631/pub/ \; || true
+        
+        # 2. 顺便把包含它的那行代码的尖括号/双引号确认一下（确保优先本地查找）
+        find drivers/misc/mediatek/connectivity/fmradio/ -name "*.c" -exec sed -i 's|#include "osal_typedef.h"|#include "osal_typedef.h"|g' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
