@@ -369,9 +369,10 @@ jobs:
         }' fs/stat.c
         grep -q "ksu_handle_stat" fs/stat.c || { echo "ERROR: Hook lstat 注入失败"; exit 1; }
 
-        # 4. 注入 reboot
-        sed -i 's/return kernel_restart(cmd);/ksu_handle_reboot(cmd); return kernel_restart(cmd);/' kernel/reboot.c
-        grep -q "ksu_handle_reboot" kernel/reboot.c || { echo "ERROR: Hook reboot 注入失败，请检查 kernel/reboot.c"; exit 1; }
+        # 4. 注入 reboot（直接插在 SYSCALL_DEFINE4 的大括号后面）
+        sed -i '/SYSCALL_DEFINE4(reboot,/,/^{/ { /^{/ a\	ksu_handle_reboot((char *)&cmd);
+        }' kernel/reboot.c
+        grep -q "ksu_handle_reboot" kernel/reboot.c || { echo "ERROR: Hook reboot 注入失败"; exit 1; }
 
     - name: Build Kernel
       run: |
