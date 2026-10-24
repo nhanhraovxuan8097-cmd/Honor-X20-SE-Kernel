@@ -197,6 +197,12 @@ jobs:
         # 如果是被强行包含的，把尖括号改成双引号（或者直接注释）
         find drivers/misc/mediatek/connectivity/bt/ -name "*.h" -exec sed -i 's|#include "wmt_exp.h"|#include "wmt_exp.h"|g' {} + || true
 
+        # 彻底屏蔽找不到源码的 dbgtop (调试) 模块
+        echo "obj-y := " > drivers/misc/mediatek/dbgtop/Makefile || true
+        
+        # 彻底屏蔽缺少闭源 osal.h 的蓝牙模块 (bt)
+        echo "obj-y := " > drivers/misc/mediatek/connectivity/bt/Makefile || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
