@@ -359,9 +359,15 @@ jobs:
         sed -i '/SYSCALL_DEFINE3(faccessat, int, dfd, const char __user \*, filename, int, mode)/a\	ksu_handle_faccessat(\&dfd, \&filename, \&mode, NULL);' fs/open.c
         grep -q "ksu_handle_faccessat" fs/open.c || { echo "ERROR: Hook faccessat 注入失败，请检查 fs/open.c"; exit 1; }
 
-        # 3. 注入 stat (注意 4.14 内核可能用 vfs_statx)
-        sed -i 's/return vfs_statx(dfd, filename, flags, stat, AT_STATX_SYNC_AS_STAT);/return ksu_handle_stat(dfd, filename, flags, stat);/' fs/stat.c
-        grep -q "ksu_handle_stat" fs/stat.c || { echo "ERROR: Hook stat 注入失败，请检查 fs/stat.c"; exit 1; }
+        # 3. 注入 stat (精准匹配 4.14 内核的 SYSCALL_DEFINE2)
+        sed -i '/SYSCALL_DEFINE2(stat, const char __user \*, filename,/,/^{/ { /^{/ a\	ksu_handle_stat(NULL, &filename, NULL, NULL);
+        }' fs/stat.c
+        grep -q "ksu_handle_stat" fs/stat.c || { echo "ERROR: Hook stat 注入失败"; exit 1; }
+
+        # 4. 注入 lstat (同样精准匹配)
+        sed -i '/SYSCALL_DEFINE2(lstat, const char __user \*, filename,/,/^{/ { /^{/ a\	ksu_handle_stat(NULL, &filename, NULL, NULL);
+        }' fs/stat.c
+        grep -q "ksu_handle_stat" fs/stat.c || { echo "ERROR: Hook lstat 注入失败"; exit 1; }
 
         # 4. 注入 reboot
         sed -i 's/return kernel_restart(cmd);/ksu_handle_reboot(cmd); return kernel_restart(cmd);/' kernel/reboot.c
