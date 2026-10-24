@@ -378,6 +378,17 @@ jobs:
         # 注释掉 4.14 内核不存在的 vdso/clocksource.h 头文件
         sed -i 's|#include <vdso/clocksource.h>|// #include <vdso/clocksource.h>|g' drivers/kernelsu/extension/cpu_spoof.c || true
 
+        # 1. 修复 fallthrough 宏未定义（4.14 内核不支持此属性）
+        sed -i 's/\bfallthrough;/\/\/ fallthrough;/g' drivers/kernelsu/policy/allowlist.c || true
+
+        # 2. 手动补充 KSU_FEATURE_SELINUX_HIDE 枚举定义（SukiSU 新特性，旧版头文件缺失）
+        sed -i '/enum ksu_feature_id {/a\    KSU_FEATURE_SELINUX_HIDE = 4,' uapi/feature.h || true
+        # 如果 uapi/feature.h 不在顶层，尝试在 kernelsu 目录下查找并修改
+        find . -path "*/drivers/kernelsu/uapi/feature.h" -exec sed -i '/enum ksu_feature_id {/a\    KSU_FEATURE_SELINUX_HIDE = 4,' {} + || true
+
+        # 3. 修复 ksu_sulog_capture 参数类型不匹配（强制类型转换）
+        sed -i 's/ksu_sulog_capture(..., USER_ARG_NULL, gfp)/ksu_sulog_capture(..., (const struct user_arg_ptr *)USER_ARG_NULL, gfp)/g' drivers/kernelsu/sulog/event.c || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
