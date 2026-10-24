@@ -366,6 +366,9 @@ jobs:
         sed -i '/SYSCALL_DEFINE4(reboot/,/^{/ s/^{/{\n\tksu_handle_reboot((char *)\&cmd);/' kernel/reboot.c
         grep -q "ksu_handle_reboot" kernel/reboot.c || { echo "ERROR: Hook reboot 注入失败"; exit 1; }
 
+        # 注释掉 4.14 内核不存在的 static_call.h 头文件
+        sed -i 's|#include <linux/static_call.h>|// #include <linux/static_call.h>|g' drivers/kernelsu/kernel_includes.h || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
