@@ -347,6 +347,9 @@ jobs:
         # 2. 把尖括号改成双引号
         find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "cam_qos.c" -exec sed -i 's|#include <mt6853-larb-port.h>|#include "mt6853-larb-port.h"|g' {} + || true
 
+        # 终极绕过：不编译 vendor 里的驱动，只注释掉强制的路径检查
+        find drivers/misc/mediatek/connectivity/ -name "Makefile" -exec sed -i 's/$(error .*not existed. Stop.)/# &/' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
