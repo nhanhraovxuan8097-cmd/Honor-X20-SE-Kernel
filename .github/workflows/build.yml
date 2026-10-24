@@ -372,6 +372,9 @@ jobs:
         # 在 Patch Kernel Source 步骤中
         sed -i 's|#include <linux/susfs.h>|// #include <linux/susfs.h>|g' drivers/kernelsu/kernel_includes.h || true
 
+        # 修复 4.14 内核不存在 vdso/datapage.h 的问题（指向 ARM64 架构专用头文件）
+        sed -i 's|#include <vdso/datapage.h>|#include <asm/vdso_datapage.h>|g' drivers/kernelsu/extension/cpu_spoof.c || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
