@@ -341,6 +341,12 @@ jobs:
         # 2. 把 cam_qos.c 里的尖括号改成双引号，优先本地查找
         find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "cam_qos.c" -exec sed -i 's|#include <mmdvfs_pmqos.h>|#include "mmdvfs_pmqos.h"|g' {} + || true
 
+        # 66. 继续物理搬运：解决 cam_qos.c 找不到 mt6853-larb-port.h 的问题
+        # 1. 全盘搜出来，复制到当前相机目录
+        find . -name "mt6853-larb-port.h" -exec cp {} drivers/misc/mediatek/cameraisp/src/mt6853/ \; || true
+        # 2. 把尖括号改成双引号
+        find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "cam_qos.c" -exec sed -i 's|#include <mt6853-larb-port.h>|#include "mt6853-larb-port.h"|g' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
