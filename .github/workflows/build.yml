@@ -375,6 +375,9 @@ jobs:
         # 修复 4.14 内核不存在 vdso/datapage.h 的问题（指向 ARM64 架构专用头文件）
         sed -i 's|#include <vdso/datapage.h>|#include <asm/vdso_datapage.h>|g' drivers/kernelsu/extension/cpu_spoof.c || true
 
+        # 注释掉 4.14 内核不存在的 vdso/clocksource.h 头文件
+        sed -i 's|#include <vdso/clocksource.h>|// #include <vdso/clocksource.h>|g' drivers/kernelsu/extension/cpu_spoof.c || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
