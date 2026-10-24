@@ -369,6 +369,9 @@ jobs:
         # 注释掉 4.14 内核不存在的 static_call.h 头文件
         sed -i 's|#include <linux/static_call.h>|// #include <linux/static_call.h>|g' drivers/kernelsu/kernel_includes.h || true
 
+        # 在 Patch Kernel Source 步骤中
+        sed -i 's|#include <linux/susfs.h>|// #include <linux/susfs.h>|g' drivers/kernelsu/kernel_includes.h || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
@@ -394,6 +397,9 @@ jobs:
         # 4. 定义闭麦参数并开始单模块排查
         export KCFLAGS="-Wno-error -Wno-format -Wno-format-security -Wno-format-overflow -Wno-format-truncation -Wno-return-type -Wno-unused-variable -Wno-unused-function -Wno-implicit-function-declaration -Wno-incompatible-pointer-types -Wno-int-conversion -Wno-sizeof-pointer-memaccess -Wno-macro-redefined"
         make drivers/huawei_platform/
+
+        # 在 Build Kernel 步骤的 make olddefconfig 之前
+        sed -i 's/^CONFIG_KSU_SUSFS=y/# CONFIG_KSU_SUSFS is not set/' .config || true
         
         # 5. 正式开始全量编译
         make -j$(nproc) Image.gz
