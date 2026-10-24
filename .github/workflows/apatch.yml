@@ -192,6 +192,11 @@ jobs:
         find . -name "ufs.h" -exec cp {} drivers/scsi/ufs/mediatek/mt6853/ \; || true
         find drivers/scsi/ufs/mediatek/mt6853/ -name "*.h" -exec sed -i 's|#include <ufs.h>|#include "ufs.h"|g' {} + || true
 
+        # 69. 物理搬运：解决蓝牙模块找不到 wmt_exp.h 的问题
+        find . -name "wmt_exp.h" -exec cp {} drivers/misc/mediatek/connectivity/bt/ \; || true
+        # 如果是被强行包含的，把尖括号改成双引号（或者直接注释）
+        find drivers/misc/mediatek/connectivity/bt/ -name "*.h" -exec sed -i 's|#include "wmt_exp.h"|#include "wmt_exp.h"|g' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
