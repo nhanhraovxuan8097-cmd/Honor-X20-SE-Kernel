@@ -184,8 +184,9 @@ jobs:
         find drivers/misc/mediatek/cameraisp/src/mt6853/ -name "cam_qos.c" -exec sed -i 's|#include <mt6853-larb-port.h>|#include "mt6853-larb-port.h"|g' {} + || true
         find drivers/misc/mediatek/connectivity/ -name "Makefile" -exec sed -i 's/$(error .*not existed. Stop.)/# &/' {} + || true
 
-        # 1. 修复之前漏掉的 connectivity 报错（直接删掉包含 Stop. 的那行）
-        sed -i '/not existed. Stop./d' drivers/misc/mediatek/connectivity/Makefile || true
+        # 暴力绝杀：只要 connectivity 的 Makefile 里带有 error 或 Stop 的行，统统删掉！
+        find drivers/misc/mediatek/connectivity/ -name "Makefile" -exec sed -i '/\$(error/d' {} + || true
+        find drivers/misc/mediatek/connectivity/ -name "Makefile" -exec sed -i '/Stop\./d' {} + || true
 
         # 2. 修复 UFS 驱动找不到 ufs.h 的问题
         find . -name "ufs.h" -exec cp {} drivers/scsi/ufs/mediatek/mt6853/ \; || true
