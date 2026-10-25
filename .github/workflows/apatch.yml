@@ -340,6 +340,16 @@ jobs:
         sed -i 's|#include <devmpu.h>|#include "devmpu.h"|g' drivers/misc/mediatek/devmpu/devmpu.c || true
         echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/devmpu/' >> drivers/misc/mediatek/devmpu/Makefile || true
 
+        # 救援 Wi-Fi 驱动找不到 wmt_exp.h
+        # 1. 把 wmt_exp.h 强行复制到 Wi-Fi 报错的 include 目录下
+        cp drivers/misc/mediatek/connectivity/wmt_drv/common_main/linux/include/wmt_exp.h drivers/misc/mediatek/connectivity/wlan_drv_gen4m/os/linux/include/ || true
+        # 如果上面那个路径没有，试一下 common 目录下的
+        cp drivers/misc/mediatek/connectivity/wmt_drv/common/include/wmt_exp.h drivers/misc/mediatek/connectivity/wlan_drv_gen4m/os/linux/include/ || true
+        
+        # 2. 把 wmt_drv 的路径加到 Wi-Fi 驱动的 Makefile 里
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/connectivity/wmt_drv/common_main/linux/include/' >> drivers/misc/mediatek/connectivity/wlan_drv_gen4m/os/linux/Makefile || true
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/connectivity/wmt_drv/common/include/' >> drivers/misc/mediatek/connectivity/wlan_drv_gen4m/os/linux/Makefile || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
