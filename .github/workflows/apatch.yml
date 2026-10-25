@@ -305,6 +305,15 @@ jobs:
         # 2. 顺便把所有 gps_drv 目录下的尖括号引用改成双引号，双保险
         find drivers/misc/mediatek/connectivity/gps_drv/ -type f -exec sed -i 's|#include <osal_typedef.h>|#include "osal_typedef.h"|g' {} + || true
 
+        # 终极救援 GPS：暴力搬运 wmt_drv 下的所有头文件，并加满搜索路径
+        # 1. 把 wmt_drv 整个目录下所有的 .h 文件全搜出来，全塞给 gps_drv
+        find drivers/misc/mediatek/connectivity/wmt_drv/ -name "*.h" -exec cp {} drivers/misc/mediatek/connectivity/gps_drv/ \; || true
+
+        # 2. 强行把 wmt_drv 及其常见的 include 目录，全加到 gps_drv 的搜索路径里
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/connectivity/wmt_drv/' >> drivers/misc/mediatek/connectivity/gps_drv/Makefile || true
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/connectivity/wmt_drv/common/include/' >> drivers/misc/mediatek/connectivity/gps_drv/Makefile || true
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/connectivity/wmt_drv/common_main/linux/include/' >> drivers/misc/mediatek/connectivity/gps_drv/Makefile || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
