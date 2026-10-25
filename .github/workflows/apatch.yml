@@ -299,6 +299,12 @@ jobs:
         fi
         sed -i 's|#include <unipro.h>|#include "unipro.h"|g' drivers/scsi/ufs/mediatek/mt6853/ufs-mtk-platform.c || true
 
+        # 1. 强制把 gps_drv 目录加入搜索路径，以后这个目录里的尖括号都能认了
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/connectivity/gps_drv/' >> drivers/misc/mediatek/connectivity/gps_drv/Makefile || true
+
+        # 2. 顺便把所有 gps_drv 目录下的尖括号引用改成双引号，双保险
+        find drivers/misc/mediatek/connectivity/gps_drv/ -type f -exec sed -i 's|#include <osal_typedef.h>|#include "osal_typedef.h"|g' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
