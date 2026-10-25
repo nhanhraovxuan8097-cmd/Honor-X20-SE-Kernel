@@ -279,6 +279,26 @@ jobs:
         # 2. 把 osal.h 里那个找不到的相对路径，改成直接双引号引用
         sed -i 's|#include "../../debug_utility/ring.h"|#include "ring.h"|g' drivers/misc/mediatek/connectivity/gps_drv/osal.h || true
 
+        # ==========================================
+        # 终极扫尾：GPS 套娃与 UFS 协议头文件
+        # ==========================================
+        
+        # 1. GPS 模块：把 wmt_drv 里的 include 目录全搬过去，管饱
+        cp drivers/misc/mediatek/connectivity/wmt_drv/common_main/include/*.h drivers/misc/mediatek/connectivity/gps_drv/ || true
+        sed -i 's|#include <wmt_exp.h>|#include "wmt_exp.h"|g' drivers/misc/mediatek/connectivity/gps_drv/stp_chrdev_gps.c || true
+
+        # 2. UFS Trace 头文件：强制让 ufs 目录能在自己脚下找到头文件
+        echo 'ccflags-y += -I$(srctree)/drivers/scsi/ufs/' >> drivers/scsi/ufs/Makefile || true
+        
+        # 3. UFS unipro.h：直接把它找出来塞给 mt6853 目录
+        # （用绝对路径指向标准的 ufs 目录，防止找错）
+        if [ -f drivers/scsi/ufs/unipro.h ]; then
+            cp drivers/scsi/ufs/unipro.h drivers/scsi/ufs/mediatek/mt6853/ || true
+        else
+            find . -name "unipro.h" -exec cp {} drivers/scsi/ufs/mediatek/mt6853/ \; || true
+        fi
+        sed -i 's|#include <unipro.h>|#include "unipro.h"|g' drivers/scsi/ufs/mediatek/mt6853/ufs-mtk-platform.c || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
