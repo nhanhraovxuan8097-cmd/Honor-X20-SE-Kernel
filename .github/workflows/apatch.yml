@@ -229,6 +229,24 @@ jobs:
         # 修复 osal.h 的 incomplete type 报错（强制让它先包含 ring.h）
         find drivers/misc/mediatek/connectivity/fmradio/chips/mt6631/pub/ -name "osal.h" -exec sed -i '1i #include "ring.h"' {} + || true
 
+        # ==========================================
+        # 精确制导救援（根据 WSL 本地搜索结果）
+        # ==========================================
+        
+        # 1. 救援 GPS 模块 (缺 osal_typedef.h)
+        cp drivers/misc/mediatek/connectivity/wmt_drv/common_main/linux/include/osal_typedef.h drivers/misc/mediatek/connectivity/gps_drv/ || true
+        find drivers/misc/mediatek/connectivity/gps_drv/ -type f -exec sed -i 's|#include "osal_typedef.h"|#include "osal_typedef.h"|g' {} + || true
+
+        # 2. 救援 debug_latch 模块 (缺 cache_parity.h)
+        # 它自己就在自己目录下，但用了 < >，直接改掉并加路径
+        sed -i 's|#include <cache_parity.h>|#include "cache_parity.h"|g' drivers/misc/mediatek/debug_latch/cache_parity/cache_parity.c || true
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/debug_latch/cache_parity/' >> drivers/misc/mediatek/debug_latch/cache_parity/Makefile || true
+
+        # 3. 救援 UFS 存储模块 (缺 ufshcd.h)
+        # UFS 是手机硬盘，非常重要！把它复制到 mt6853 目录下
+        cp drivers/scsi/ufs/ufshcd.h drivers/scsi/ufs/mediatek/mt6853/ || true
+        find drivers/scsi/ufs/mediatek/mt6853/ -type f -exec sed -i 's|#include <ufshcd.h>|#include "ufshcd.h"|g' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
