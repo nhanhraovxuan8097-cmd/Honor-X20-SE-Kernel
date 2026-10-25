@@ -247,6 +247,29 @@ jobs:
         cp drivers/scsi/ufs/ufshcd.h drivers/scsi/ufs/mediatek/mt6853/ || true
         find drivers/scsi/ufs/mediatek/mt6853/ -type f -exec sed -i 's|#include <ufshcd.h>|#include "ufshcd.h"|g' {} + || true
 
+        # ==========================================
+        # 绝对路径精确救援（根据 WSL 搜索结果）
+        # ==========================================
+        
+        # 1. 救援 GPS (缺 stp_exp.h)
+        cp drivers/misc/mediatek/connectivity/wmt_drv/common_main/include/stp_exp.h drivers/misc/mediatek/connectivity/gps_drv/ || true
+        sed -i 's|#include "stp_exp.h"|#include "stp_exp.h"|g' drivers/misc/mediatek/connectivity/gps_drv/stp_chrdev_gps.c || true
+
+        # 2. 救援 debug_latch (缺 plat_dbg_info.h)
+        # 文件就在本地，把尖括号改双引号，并加搜索路径
+        sed -i 's|#include <plat_dbg_info.h>|#include "plat_dbg_info.h"|g' drivers/misc/mediatek/debug_latch/plat_dbg_info/plat_dbg_info.c || true
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/debug_latch/plat_dbg_info/' >> drivers/misc/mediatek/debug_latch/plat_dbg_info/Makefile || true
+
+        # 3. 救援 SPMI (缺 spmi_sw.h)
+        # 文件就在本地，改引号并加路径
+        sed -i 's|#include <spmi_sw.h>|#include "spmi_sw.h"|g' drivers/spmi/mtk-pmif.c drivers/spmi/mtk-dbg.c || true
+        echo 'ccflags-y += -I$(srctree)/drivers/spmi/' >> drivers/spmi/Makefile || true
+
+        # 4. 终极抢救 UFS 存储 (缺 struct ufs_sb_private_info)
+        # 将全局完整的 ufs.h 强行覆盖掉 mt6853 目录下那个残缺的 ufs.h
+        cp drivers/scsi/ufs/ufs.h drivers/scsi/ufs/mediatek/mt6853/ufs.h || true
+        find drivers/scsi/ufs/mediatek/mt6853/ -name "*.h" -exec sed -i 's|#include <ufs.h>|#include "ufs.h"|g' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
