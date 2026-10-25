@@ -214,8 +214,8 @@ jobs:
         find drivers/misc/mediatek/connectivity/wmt_drv/ -name "*.h" -exec cp {} drivers/misc/mediatek/connectivity/fmradio/chips/mt6631/pub/ \; || true
         find drivers/misc/mediatek/connectivity/common/ -name "*.h" -exec cp {} drivers/misc/mediatek/connectivity/fmradio/chips/mt6631/pub/ \; || true
 
-        # 1. 全盘搜出 ring.h 的真实位置，强行复制到报错的 pub 目录下
-        find . -name "ring.h" -exec cp {} drivers/misc/mediatek/connectivity/fmradio/chips/mt6631/pub/ \; || true
+        # 1. 精确制导：直接把真实位置的 ring.h 复制过去，覆盖掉可能找错的同名文件
+        cp drivers/misc/mediatek/connectivity/wmt_drv/debug_utility/ring.h drivers/misc/mediatek/connectivity/fmradio/chips/mt6631/pub/ || true
         # 2. 把 osal.h 里那个恶心的相对路径改成直接双引号引用
         find drivers/misc/mediatek/connectivity/fmradio/chips/mt6631/pub/ -name "osal.h" -exec sed -i 's|#include "../../debug_utility/ring.h"|#include "ring.h"|g' {} + || true
 
