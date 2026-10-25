@@ -219,6 +219,13 @@ jobs:
         # 2. 把 osal.h 里那个恶心的相对路径改成直接双引号引用
         find drivers/misc/mediatek/connectivity/fmradio/chips/mt6631/pub/ -name "osal.h" -exec sed -i 's|#include "../../debug_utility/ring.h"|#include "ring.h"|g' {} + || true
 
+        # 修复 mtk_wcn_cmb_hw.h 用尖括号引用 osal_typedef.h 找不到的问题
+        # 1. 把当前目录（pub）下所有 .c 和 .h 文件里的 <osal_typedef.h> 全改成 "osal_typedef.h"
+        find drivers/misc/mediatek/connectivity/fmradio/chips/mt6631/pub/ -type f \( -name "*.c" -o -name "*.h" \) -exec sed -i 's|#include <osal_typedef.h>|#include "osal_typedef.h"|g' {} + || true
+
+        # 2. 双重保险：直接把当前 pub 目录加到 FM 收音机的 Makefile 搜索路径里
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/connectivity/fmradio/chips/mt6631/pub/' >> drivers/misc/mediatek/connectivity/fmradio/Makefile || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
