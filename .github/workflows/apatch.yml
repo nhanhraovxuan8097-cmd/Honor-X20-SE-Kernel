@@ -270,6 +270,9 @@ jobs:
         cp drivers/scsi/ufs/ufs.h drivers/scsi/ufs/mediatek/mt6853/ufs.h || true
         find drivers/scsi/ufs/mediatek/mt6853/ -name "*.h" -exec sed -i 's|#include <ufs.h>|#include "ufs.h"|g' {} + || true
 
+        # 彻底解决 GPS 模块的套娃依赖：把 wmt_drv 的 include 目录下所有 .h 全搬过去
+        cp drivers/misc/mediatek/connectivity/wmt_drv/common_main/linux/include/*.h drivers/misc/mediatek/connectivity/gps_drv/ || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
