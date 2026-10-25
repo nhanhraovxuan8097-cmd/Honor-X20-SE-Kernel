@@ -273,6 +273,12 @@ jobs:
         # 彻底解决 GPS 模块的套娃依赖：把 wmt_drv 的 include 目录下所有 .h 全搬过去
         cp drivers/misc/mediatek/connectivity/wmt_drv/common_main/linux/include/*.h drivers/misc/mediatek/connectivity/gps_drv/ || true
 
+        # 修复 osal.h 搬家后，原有的相对路径失效的问题
+        # 1. 把 ring.h 也搬到 gps_drv 目录
+        cp drivers/misc/mediatek/connectivity/wmt_drv/debug_utility/ring.h drivers/misc/mediatek/connectivity/gps_drv/ || true
+        # 2. 把 osal.h 里那个找不到的相对路径，改成直接双引号引用
+        sed -i 's|#include "../../debug_utility/ring.h"|#include "ring.h"|g' drivers/misc/mediatek/connectivity/gps_drv/osal.h || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
