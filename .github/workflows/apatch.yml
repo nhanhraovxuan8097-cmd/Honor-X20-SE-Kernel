@@ -226,6 +226,9 @@ jobs:
         # 2. 双重保险：直接把当前 pub 目录加到 FM 收音机的 Makefile 搜索路径里
         echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/connectivity/fmradio/chips/mt6631/pub/' >> drivers/misc/mediatek/connectivity/fmradio/Makefile || true
 
+        # 修复 osal.h 的 incomplete type 报错（强制让它先包含 ring.h）
+        find drivers/misc/mediatek/connectivity/fmradio/chips/mt6631/pub/ -name "osal.h" -exec sed -i '1i #include "ring.h"' {} + || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
