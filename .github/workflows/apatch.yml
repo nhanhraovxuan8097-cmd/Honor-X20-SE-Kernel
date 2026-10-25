@@ -210,6 +210,10 @@ jobs:
         # 2. 顺便把包含它的那行代码的尖括号/双引号确认一下（确保优先本地查找）
         find drivers/misc/mediatek/connectivity/fmradio/ -name "*.c" -exec sed -i 's|#include "osal_typedef.h"|#include "osal_typedef.h"|g' {} + || true
 
+        # 把 wmt_drv 和 common 底下所有的头文件，全部打包搬到 FM 模块的 pub 目录下！
+        find drivers/misc/mediatek/connectivity/wmt_drv/ -name "*.h" -exec cp {} drivers/misc/mediatek/connectivity/fmradio/chips/mt6631/pub/ \; || true
+        find drivers/misc/mediatek/connectivity/common/ -name "*.h" -exec cp {} drivers/misc/mediatek/connectivity/fmradio/chips/mt6631/pub/ \; || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
