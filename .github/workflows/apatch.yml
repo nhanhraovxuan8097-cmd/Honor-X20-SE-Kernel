@@ -320,6 +320,26 @@ jobs:
         # 2. 暴力正则匹配：只要这行里有 ring.h，整行替换为 #include "ring.h"
         sed -i 's|#include .*ring\.h.*|#include "ring.h"|g' drivers/misc/mediatek/connectivity/gps_drv/osal.h || true
 
+        # ==========================================
+        # 绝对路径精确制导（彻底规避重名文件）
+        # ==========================================
+        
+        # 1. 救援 GPS (缺 gps_lna_drv.h)
+        cp drivers/misc/mediatek/connectivity/gps_drv/lna_ctrl/inc/gps_lna_drv.h drivers/misc/mediatek/connectivity/gps_drv/ || true
+        sed -i 's|#include "gps_lna_drv.h"|#include "gps_lna_drv.h"|g' drivers/misc/mediatek/connectivity/gps_drv/stp_chrdev_gps.c || true
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/connectivity/gps_drv/' >> drivers/misc/mediatek/connectivity/gps_drv/Makefile || true
+
+        # 2. 救援 ION (缺 ion.h)
+        # 必须指定为 drivers/staging/android/ion/ion.h，千万别拿错
+        cp drivers/staging/android/ion/ion.h drivers/staging/android/ion/mtk/ || true
+        sed -i 's|#include <ion.h>|#include "ion.h"|g' drivers/staging/android/ion/mtk/ion_drv.h || true
+        echo 'ccflags-y += -I$(srctree)/drivers/staging/android/ion/mtk/' >> drivers/staging/android/ion/mtk/Makefile || true
+
+        # 3. 救援 devmpu (缺 devmpu.h)
+        # 就在同目录下，直接改尖括号
+        sed -i 's|#include <devmpu.h>|#include "devmpu.h"|g' drivers/misc/mediatek/devmpu/devmpu.c || true
+        echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/devmpu/' >> drivers/misc/mediatek/devmpu/Makefile || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
