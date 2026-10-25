@@ -314,6 +314,12 @@ jobs:
         echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/connectivity/wmt_drv/common/include/' >> drivers/misc/mediatek/connectivity/gps_drv/Makefile || true
         echo 'ccflags-y += -I$(srctree)/drivers/misc/mediatek/connectivity/wmt_drv/common_main/linux/include/' >> drivers/misc/mediatek/connectivity/gps_drv/Makefile || true
 
+        # 终极修复 gps 的 osal.h 找不到 ring.h 的问题
+        # 1. 强制把 ring.h 复制过去
+        cp drivers/misc/mediatek/connectivity/wmt_drv/debug_utility/ring.h drivers/misc/mediatek/connectivity/gps_drv/ || true
+        # 2. 暴力正则匹配：只要这行里有 ring.h，整行替换为 #include "ring.h"
+        sed -i 's|#include .*ring\.h.*|#include "ring.h"|g' drivers/misc/mediatek/connectivity/gps_drv/osal.h || true
+
     - name: Build Kernel
       run: |
         cd Code_Opensource/kernel
